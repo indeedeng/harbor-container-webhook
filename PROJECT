@@ -1,0 +1,3 @@
+domain: indeed.com
+repo: indeed.com/devops-incubation/harbor-container-webhook
+version: "2"
