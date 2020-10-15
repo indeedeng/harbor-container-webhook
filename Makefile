@@ -17,9 +17,9 @@ all: manager
 test: generate fmt manifests
 	go test ./... -coverprofile cover.out
 
-# Build manager binary
-manager: generate fmt
-	go build -o bin/manager main.go
+# Build harbor-container-webhook binary
+harbor-container-webhook: generate fmt
+	go build -o bin/harbor-container-webhook main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt manifests

@@ -44,7 +44,7 @@ issues:
   exclude-rules:
     # Disable linters that are annoying in tests.
     - path: _test\.go
-      linters: [gochecknoglobals, bodyclose, gocritic, gosec, staticcheck]
+      linters: [bodyclose, gocritic, gosec, staticcheck]
 
 linters:
   disable-all: true
@@ -58,7 +58,6 @@ linters:
     - errcheck
     - exhaustive
     - exportloopref
-    - gochecknoglobals
     - gochecknoinits
     - gocritic
     - godot

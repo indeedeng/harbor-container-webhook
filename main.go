@@ -7,9 +7,10 @@ package main
 import (
 	"crypto/tls"
 	"flag"
-	"net/http"
 	"os"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
 
@@ -41,7 +42,7 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, harborAddr, certDir, resyncDur string
+	var metricsAddr, harborAddr, certDir, resyncDur, timeoutDur string
 	var enableLeaderElection, skipVerify bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -50,16 +51,14 @@ func main() {
 	flag.StringVar(&harborAddr, "harbor-addr", ":8080", "The address the harbor binds to.")
 	flag.StringVar(&certDir, "cert-dir", "", "the directory that contains the server key and certificate.")
 	flag.StringVar(&resyncDur, "resync-interval", "1m", "how often projects & proxy cache registry info is refreshed from the harbor API")
+	flag.StringVar(&timeoutDur, "timeout", "1m", "default timeout for communicating with the harbor API")
 	flag.BoolVar(&skipVerify, "skip-verify", false, "skip TLS certificate verification of harbor")
 	flag.Parse()
 
 	harborUser := os.Getenv("HARBOR_USER")
 	harborPass := os.Getenv("HARBOR_PASS")
-	resyncDuration, err := time.ParseDuration(resyncDur)
-	if err != nil {
-		setupLog.Error(err, "invalid resync duration: "+resyncDur)
-		os.Exit(1)
-	}
+	resyncDuration := mustParseDuration(resyncDur)
+	timeoutDuration := mustParseDuration(timeoutDur)
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
@@ -68,23 +67,28 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "harbor-container-webhook.indeed.com",
+		LeaderElectionID:   "harbor-container-webhook",
 		CertDir:            certDir,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start harbor-container-webhook")
 		os.Exit(1)
 	}
 
 	// +kubebuilder:scaffold:builder
-
-	client := http.DefaultClient
+	client := cleanhttp.DefaultClient()
 	if skipVerify {
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
 		client.Transport = transport
 	}
+	client.Timeout = timeoutDuration
+
 	projectsCache := mutate.NewProjectsCache(client, harborAddr, harborUser, harborPass, resyncDuration)
+	go func() {
+		// query the cache once at startup to ensure it is filled
+		_, _ = projectsCache.List()
+	}()
 
 	decoder, _ := admission.NewDecoder(scheme)
 	mutate := mutate.PodContainerProxier{
@@ -96,9 +100,18 @@ func main() {
 
 	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &mutate})
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting harbor-container-webhook")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error(err, "problem running harbor-container-webhook")
 		os.Exit(1)
 	}
+}
+
+func mustParseDuration(s string) time.Duration {
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		setupLog.Error(err, "invalid duration: "+s)
+		os.Exit(1)
+	}
+	return dur
 }

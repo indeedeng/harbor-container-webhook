@@ -15,6 +15,8 @@ import (
 
 	"github.com/peterhellberg/link"
 
+	"golang.org/x/sync/semaphore"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -39,6 +41,7 @@ type projectsCache struct {
 		projects   []projectWithSummary
 		expiration time.Time
 	}
+	updating *semaphore.Weighted
 }
 
 func NewProjectsCache(client *http.Client, harborEndpoint, harborUser, harborPass string, resyncInterval time.Duration) ProjectsCache {
@@ -47,6 +50,8 @@ func NewProjectsCache(client *http.Client, harborEndpoint, harborUser, harborPas
 		harborEndpoint: harborEndpoint,
 		authHeader:     "Basic " + base64.StdEncoding.EncodeToString([]byte(harborUser+":"+harborPass)),
 		resyncInterval: resyncInterval,
+		updating:       semaphore.NewWeighted(1),
+		pageSize:       defaultPageSize,
 	}
 }
 
@@ -58,28 +63,38 @@ type ProjectsCache interface {
 
 func (p *projectsCache) List() ([]projectWithSummary, error) {
 	if !p.cacheValid() {
-		logger.Info("cache out of date, refreshing projects")
-		if err := p.updateCache(); err != nil {
-			return []projectWithSummary{}, fmt.Errorf("failed to update projects cache: %w", err)
-		}
+		logger.Info("cache out of date, serving stale projects")
+		go func() {
+			if err := p.updateCache(); err != nil {
+				logger.Error(err, "failed to update projects cache")
+			} else {
+				logger.Info("projects cache updated")
+			}
+		}()
 	}
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	return p.lock.projects, nil
 }
 
-func (p projectsCache) cacheValid() bool {
+func (p *projectsCache) cacheValid() bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	return !p.lock.expiration.IsZero() && time.Now().Before(p.lock.expiration)
 }
 
 func (p *projectsCache) updateCache() error {
-	projects, err := p.listAll()
+	if !p.updating.TryAcquire(1) {
+		return nil
+	}
+	defer p.updating.Release(1)
+
+	ctx := context.Background()
+	projects, err := p.listAll(ctx)
 	if err != nil {
 		return err
 	}
-	projectsWithSummary, err := p.enrichProjects(projects)
+	projectsWithSummary, err := p.enrichProjects(ctx, projects)
 	if err != nil {
 		return err
 	}
@@ -90,11 +105,11 @@ func (p *projectsCache) updateCache() error {
 	return nil
 }
 
-func (p *projectsCache) enrichProjects(projects []models.Project) ([]projectWithSummary, error) {
+func (p *projectsCache) enrichProjects(ctx context.Context, projects []models.Project) ([]projectWithSummary, error) {
 	summaries := make([]projectWithSummary, 0, len(projects))
 	for i, project := range projects {
 		url := fmt.Sprintf("%s/api/v2.0/projects/%d/summary", p.harborEndpoint, project.ProjectID)
-		bytes, _, err := p.httpGet(url)
+		bytes, _, err := p.httpGet(ctx, url)
 		if err != nil {
 			return []projectWithSummary{}, err
 		}
@@ -111,16 +126,16 @@ func (p *projectsCache) enrichProjects(projects []models.Project) ([]projectWith
 	return summaries, nil
 }
 
-func (p *projectsCache) listAll() ([]models.Project, error) {
+func (p *projectsCache) listAll(ctx context.Context) ([]models.Project, error) {
 	list := make([]models.Project, 0)
-	projects, group, err := p.fetchFirstProjects()
+	projects, group, err := p.fetchFirstProjects(ctx)
 	if err != nil {
 		return []models.Project{}, err
 	}
 	list = append(list, projects...)
 	for k, l := range group {
-		for l.Rel == "next" {
-			projects, group, err = p.fetchProjects(l.URI)
+		for l != nil && l.Rel == "next" {
+			projects, group, err = p.fetchProjects(ctx, l.URI)
 			list = append(list, projects...)
 			l = group[k]
 		}
@@ -128,37 +143,34 @@ func (p *projectsCache) listAll() ([]models.Project, error) {
 	return list, nil
 }
 
-func (p *projectsCache) fetchFirstProjects() ([]models.Project, link.Group, error) {
+func (p *projectsCache) fetchFirstProjects(ctx context.Context) ([]models.Project, link.Group, error) {
 	url := fmt.Sprintf("%s/api/v2.0/projects?page=%d&page_size=%d", p.harborEndpoint, 1, p.pageSize)
-	return p.fetchProjects(url)
+	return p.fetchProjects(ctx, url)
 }
 
-func (p *projectsCache) fetchProjects(url string) ([]models.Project, link.Group, error) {
-	bytes, headers, err := p.httpGet(url)
+func (p *projectsCache) fetchProjects(ctx context.Context, url string) ([]models.Project, link.Group, error) {
+	bytes, headers, err := p.httpGet(ctx, url)
 	if err != nil {
 		return []models.Project{}, link.Group{}, err
 	}
 	var projects []models.Project
 	if err := json.Unmarshal(bytes, &projects); err != nil {
-		logger.Error(err, "failed to unmarshal response from "+url)
-		return []models.Project{}, link.Group{}, err
+		return []models.Project{}, link.Group{}, fmt.Errorf("failed to unmarshal response from %q: %w", url, err)
 	}
 	return projects, link.ParseHeader(headers), nil
 }
 
-func (p *projectsCache) httpGet(url string) ([]byte, http.Header, error) {
-	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, url, nil)
+func (p *projectsCache) httpGet(ctx context.Context, url string) ([]byte, http.Header, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		logger.Error(err, "failed to create http.Request for "+url)
-		return []byte{}, nil, err
+		return []byte{}, nil, fmt.Errorf("failed to create http.Request for %q: %w", url, err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", p.authHeader)
 
 	response, err := p.client.Do(req)
 	if err != nil {
-		logger.Error(err, "failed to get "+url)
-		return []byte{}, nil, err
+		return []byte{}, nil, fmt.Errorf("failed to get %q: %w", url, err)
 	}
 	if response.Body == nil {
 		return []byte{}, nil, errors.New("no response body in request to " + url)
@@ -166,8 +178,7 @@ func (p *projectsCache) httpGet(url string) ([]byte, http.Header, error) {
 	defer response.Body.Close()
 	bytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		logger.Error(err, "failed to read response body from "+url)
-		return []byte{}, nil, err
+		return []byte{}, nil, fmt.Errorf("failed to read response body from %q: %w", url, err)
 	}
 	return bytes, response.Header, nil
 }
