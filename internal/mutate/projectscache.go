@@ -130,12 +130,15 @@ func (p *projectsCache) listAll(ctx context.Context) ([]models.Project, error) {
 	list := make([]models.Project, 0)
 	projects, group, err := p.fetchFirstProjects(ctx)
 	if err != nil {
-		return []models.Project{}, err
+		return []models.Project{}, fmt.Errorf("failed to list projects: %w", err)
 	}
 	list = append(list, projects...)
 	for k, l := range group {
 		for l != nil && l.Rel == "next" {
 			projects, group, err = p.fetchProjects(ctx, l.URI)
+			if err != nil {
+				return []models.Project{}, fmt.Errorf("failed to list projects from %q: %w", l.URI, err)
+			}
 			list = append(list, projects...)
 			l = group[k]
 		}

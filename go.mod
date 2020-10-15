@@ -7,10 +7,12 @@ require (
 	github.com/goharbor/harbor/src v0.0.0-20200930121830-5293c8ff4b67
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/peterhellberg/link v1.1.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.6
+	oss.indeed.com/go/go-groups v1.1.3 // indirect
+	oss.indeed.com/go/go-opine v1.0.0 // indirect
 	sigs.k8s.io/controller-runtime v0.6.3
 )

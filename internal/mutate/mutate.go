@@ -21,11 +21,7 @@ type PodContainerProxier struct {
 	HarborEndpoint string
 }
 
-func (p *PodContainerProxier) Start(i <-chan struct{}) error {
-	return nil
-}
-
-// Handle mutates init containers and containers
+// Handle mutates init containers and containers.
 func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request) admission.Response {
 	pod := &corev1.Pod{}
 

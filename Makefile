@@ -1,76 +1,66 @@
+MAKEFLAGS += --warn-undefined-variables
+SHELL := bash
+.SHELLFLAGS := -euo pipefail -c
+.DEFAULT_GOAL := all
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+BIN_DIR ?= $(shell go env GOPATH)/bin
+export PATH := $(PATH):$(BIN_DIR)
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+.PHONY: deps
+deps: ## download go modules
+	go mod download
 
-all: manager
+.PHONY: fmt
+fmt: lint/check ## ensure consistent code style
+	go run oss.indeed.com/go/go-groups -w .
+	golangci-lint run --fix > /dev/null 2>&1 || true
+	go mod tidy
 
-# Run tests
-test: generate fmt manifests
-	go test ./... -coverprofile cover.out
+.PHONY: lint/check
+lint/check:
+	@if ! golangci-lint --version > /dev/null 2>&1; then \
+		echo -e "\033[0;33mgolangci-lint is not installed: run \`\033[0;32mmake lint-install\033[0m\033[0;33m\` or install it from https://golangci-lint.run\033[0m"; \
+		exit 1; \
+	fi
 
-# Build harbor-container-webhook binary
-harbor-container-webhook: generate fmt
+.PHONY: lint-install
+lint-install: ## installs golangci-lint to the go bin dir
+	@if ! golangci-lint --version > /dev/null 2>&1; then \
+		echo "Installing golangci-lint"; \
+		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(BIN_DIR) v1.31.0; \
+	fi
+
+.PHONY: lint
+lint: lint/check ## run golangci-lint
+	golangci-lint run
+	@if [ -n "$$(go run oss.indeed.com/go/go-groups -l .)" ]; then \
+		echo -e "\033[0;33mdetected fmt problems: run \`\033[0;32mmake fmt\033[0m\033[0;33m\`\033[0m"; \
+		exit 1; \
+	fi
+
+.PHONY: test
+test: lint ## run go tests
+	go test ./... -race
+
+.PHONY: gen
+gen:
+	go generate ./...
+
+.PHONY: build
+build: ## build harbor-container-webhook binary
 	go build -o bin/harbor-container-webhook main.go
 
-# Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt manifests
-	go run ./main.go
-
-# Install CRDs into a cluster
-install: manifests
-	kustomize build config/crd | kubectl apply -f -
-
-# Uninstall CRDs from a cluster
-uninstall: manifests
-	kustomize build config/crd | kubectl delete -f -
-
-# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
-	cd config/manager && kustomize edit set image controller=${IMG}
-	kustomize build config/default | kubectl apply -f -
-
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-# Run go fmt against code
-fmt:
-	go fmt ./...
-
-# Generate code
-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
-# Build the docker image
-docker-build: test
+docker-build: test ## build the docker image
 	docker build . -t ${IMG}
 
-# Push the docker image
-docker-push:
+docker-push: ## push the docker image
 	docker push ${IMG}
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.5 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+.PHONY: all
+all: test gen build
+
+.PHONY: help
+help: ## displays this help message
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_\/-]+:.*?## / {printf "\033[34m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | \
+		sort | \
+		grep -v '#'

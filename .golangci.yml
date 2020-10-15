@@ -58,7 +58,6 @@ linters:
     - errcheck
     - exhaustive
     - exportloopref
-    - gochecknoinits
     - gocritic
     - godot
     - gofmt
