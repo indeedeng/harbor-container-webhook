@@ -1,0 +1,84 @@
+run:
+  timeout: 3m
+
+linters-settings:
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - importShadow
+      - unnamedResult
+      - unnecessaryBlock
+      - unnecessaryDefer
+    settings:
+      rangeValCopy:
+        sizeThreshold: 512
+      hugeParam:
+        sizeThreshold: 512
+  gocyclo:
+    min-complexity: 16
+  golint:
+    min-confidence: 0
+  govet:
+    check-shadowing: false
+  lll:
+    line-length: 300
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    # Disable linters that are annoying in tests.
+    - path: _test\.go
+      linters: [gochecknoglobals, bodyclose, gocritic, gosec, staticcheck]
+
+linters:
+  disable-all: true
+  enable:
+    - asciicheck
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    - exportloopref
+    - gochecknoglobals
+    - gochecknoinits
+    - gocritic
+    - godot
+    - gofmt
+    - golint
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nolintlint
+    - prealloc
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck

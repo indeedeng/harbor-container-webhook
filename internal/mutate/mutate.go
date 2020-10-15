@@ -90,6 +90,5 @@ func (p *PodContainerProxier) rewriteImage(imageRef string, proxyMap map[string]
 // InjectDecoder injects the decoder.
 func (p *PodContainerProxier) InjectDecoder(d *admission.Decoder) error {
 	p.Decoder = d
-	logger.Info("decoder injected: ", "decoder", d)
 	return nil
 }

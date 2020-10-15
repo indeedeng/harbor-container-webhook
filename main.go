@@ -9,6 +9,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
 
@@ -40,7 +41,7 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, harborAddr, certDir string
+	var metricsAddr, harborAddr, certDir, resyncDur string
 	var enableLeaderElection, skipVerify bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -48,11 +49,17 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&harborAddr, "harbor-addr", ":8080", "The address the harbor binds to.")
 	flag.StringVar(&certDir, "cert-dir", "", "the directory that contains the server key and certificate.")
+	flag.StringVar(&resyncDur, "resync-interval", "1m", "how often projects & proxy cache registry info is refreshed from the harbor API")
 	flag.BoolVar(&skipVerify, "skip-verify", false, "skip TLS certificate verification of harbor")
 	flag.Parse()
 
 	harborUser := os.Getenv("HARBOR_USER")
 	harborPass := os.Getenv("HARBOR_PASS")
+	resyncDuration, err := time.ParseDuration(resyncDur)
+	if err != nil {
+		setupLog.Error(err, "invalid resync duration: "+resyncDur)
+		os.Exit(1)
+	}
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
@@ -77,7 +84,7 @@ func main() {
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		client.Transport = transport
 	}
-	projectsCache := mutate.NewProjectsCache(client, harborAddr, harborUser, harborPass)
+	projectsCache := mutate.NewProjectsCache(client, harborAddr, harborUser, harborPass, resyncDuration)
 
 	decoder, _ := admission.NewDecoder(scheme)
 	mutate := mutate.PodContainerProxier{

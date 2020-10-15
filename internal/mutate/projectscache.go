@@ -38,7 +38,6 @@ type projectsCache struct {
 		sync.RWMutex
 		projects   []projectWithSummary
 		expiration time.Time
-		updating   bool
 	}
 }
 
@@ -58,35 +57,37 @@ type ProjectsCache interface {
 }
 
 func (p *projectsCache) List() ([]projectWithSummary, error) {
-	projects, err := p.listAll()
-	if err != nil {
-		return []projectWithSummary{}, err
+	if !p.cacheValid() {
+		logger.Info("cache out of date, refreshing projects")
+		if err := p.updateCache(); err != nil {
+			return []projectWithSummary{}, fmt.Errorf("failed to update projects cache: %w", err)
+		}
 	}
-	// TODO: cache
-	return p.enrichProjects(projects)
-}
-
-func (p *projectsCache) updateInProgress() bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
-	return p.lock.updating
+	return p.lock.projects, nil
 }
 
-func (p *projectsCache) updateCache() {
-	p.lock.Lock()
-	p.lock.updating = true
-	p.lock.Unlock()
-	defer func() {
-		p.lock.Lock()
-		p.lock.updating = false
-		p.lock.Unlock()
-	}()
+func (p projectsCache) cacheValid() bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return !p.lock.expiration.IsZero() && time.Now().Before(p.lock.expiration)
+}
+
+func (p *projectsCache) updateCache() error {
 	projects, err := p.listAll()
 	if err != nil {
-		logger.Error(err, "failed to list all harbor projects")
+		return err
 	}
-	// TODO: cache
-	return p.enrichProjects(projects)
+	projectsWithSummary, err := p.enrichProjects(projects)
+	if err != nil {
+		return err
+	}
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.lock.projects = projectsWithSummary
+	p.lock.expiration = time.Now().Add(p.resyncInterval)
+	return nil
 }
 
 func (p *projectsCache) enrichProjects(projects []models.Project) ([]projectWithSummary, error) {
