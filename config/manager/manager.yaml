@@ -24,9 +24,11 @@ spec:
     spec:
       containers:
       - command:
-        - /manager
+        - /harbor-container-webhook
         args:
         - --enable-leader-election
+        - --harbor-addr
+        - harbor.example.com
         image: controller:latest
         name: manager
         resources:
