@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 )
 
 type staticTransformer struct {
@@ -12,20 +12,20 @@ type staticTransformer struct {
 }
 
 func (s *staticTransformer) RewriteImage(imageRef string) (string, error) {
-	registry, err := mutate.RegistryFromImageRef(imageRef)
+	registry, err := webhook.RegistryFromImageRef(imageRef)
 	if err != nil {
 		return "", err
 	}
 
 	if rewrite, ok := s.proxyMap[registry]; ok {
-		return mutate.ReplaceRegistryInImageRef(imageRef, rewrite)
+		return webhook.ReplaceRegistryInImageRef(imageRef, rewrite)
 	}
 	return imageRef, nil
 }
 
-var _ mutate.ContainerTransformer = (*staticTransformer)(nil)
+var _ webhook.ContainerTransformer = (*staticTransformer)(nil)
 
-func NewTransformer(conf config.StaticProxy) mutate.ContainerTransformer {
+func NewTransformer(conf config.StaticProxy) webhook.ContainerTransformer {
 	proxyMap := make(map[string]string, len(conf.RegistryCaches))
 	for _, cache := range conf.RegistryCaches {
 		s := strings.Split(cache, ":")

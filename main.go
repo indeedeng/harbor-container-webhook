@@ -10,8 +10,8 @@ import (
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/dynamic"
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/static"
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -24,7 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -68,7 +68,7 @@ func main() {
 
 	// +kubebuilder:scaffold:builder
 
-	var transformer mutate.ContainerTransformer
+	var transformer webhook.ContainerTransformer
 	if conf.Dynamic.Enabled {
 		transformer = dynamic.NewTransformer(conf.Dynamic)
 	} else {
@@ -76,13 +76,13 @@ func main() {
 	}
 
 	decoder, _ := admission.NewDecoder(scheme)
-	mutate := mutate.PodContainerProxier{
+	mutate := webhook.PodContainerProxier{
 		Client:      mgr.GetClient(),
 		Decoder:     decoder,
 		Transformer: transformer,
 	}
 
-	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &mutate})
+	mgr.GetWebhookServer().Register("/webhook-v1-pod", &ctrlwebhook.Admission{Handler: &mutate})
 
 	setupLog.Info("starting harbor-container-webhook")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

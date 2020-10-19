@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 )
 
 func Test_registriesToHarborProxies(t *testing.T) {
@@ -32,13 +32,13 @@ func Test_registriesToHarborProxies(t *testing.T) {
 					},
 					ProjectSummary: models.ProjectSummary{
 						Registry: &model.Registry{
-							URL: "https://" + mutate.BareRegistry,
+							URL: "https://" + webhook.BareRegistry,
 						},
 					},
 				},
 			},
 			expectedProxies: map[string]string{
-				mutate.BareRegistry: "harbor.example.com/proxy-cache",
+				webhook.BareRegistry: "harbor.example.com/proxy-cache",
 			},
 		},
 	}

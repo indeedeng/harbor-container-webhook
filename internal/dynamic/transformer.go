@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 )
 
 type dynamicTransformer struct {
@@ -16,9 +16,9 @@ type dynamicTransformer struct {
 	harborEndpoint string
 }
 
-var _ mutate.ContainerTransformer = (*dynamicTransformer)(nil)
+var _ webhook.ContainerTransformer = (*dynamicTransformer)(nil)
 
-func NewTransformer(conf config.DynamicProxy) mutate.ContainerTransformer {
+func NewTransformer(conf config.DynamicProxy) webhook.ContainerTransformer {
 	harborUser := os.Getenv("HARBOR_USER")
 	harborPass := os.Getenv("HARBOR_PASS")
 	client := cleanhttp.DefaultClient()
@@ -47,13 +47,13 @@ func (d *dynamicTransformer) RewriteImage(imageRef string) (string, error) {
 		return "", err
 	}
 	proxyMap := registriesToHarborProxies(d.harborEndpoint, projects)
-	registry, err := mutate.RegistryFromImageRef(imageRef)
+	registry, err := webhook.RegistryFromImageRef(imageRef)
 	if err != nil {
 		return "", err
 	}
 
 	if rewrite, ok := proxyMap[registry]; ok {
-		return mutate.ReplaceRegistryInImageRef(imageRef, rewrite)
+		return webhook.ReplaceRegistryInImageRef(imageRef, rewrite)
 	}
 	return imageRef, nil
 }

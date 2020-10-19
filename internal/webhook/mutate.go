@@ -1,4 +1,4 @@
-package mutate
+package webhook
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var logger = ctrl.Log.WithName("mutate")
+var logger = ctrl.Log.WithName("webhook")
 
-// +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
+// +kubebuilder:webhook:path=/webhook-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
 
 type ContainerTransformer interface {
 	RewriteImage(imageRef string) (string, error)

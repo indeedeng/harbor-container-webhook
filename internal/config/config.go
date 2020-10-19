@@ -49,7 +49,7 @@ type DynamicProxy struct {
 	HarborEndpoint string `yaml:"harbor-endpoint"`
 }
 
-// StaticProxy configures a static transformer for pods that mutate the container image in a sed-like fashion.
+// StaticProxy configures a static transformer for pods that webhook the container image in a sed-like fashion.
 // For every pod, it inspects container images, and rewrites the container images according to the supplied
 // configuration below. The advantage of the static proxy configuration is that no auth or API access to harbor
 // is necessary. However, if the harbor project is renamed or deleted for the proxy cache, the static proxy could
