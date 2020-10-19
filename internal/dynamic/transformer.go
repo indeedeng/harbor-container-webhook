@@ -46,7 +46,11 @@ func (d *dynamicTransformer) RewriteImage(imageRef string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	proxyMap := registriesToHarborProxies(d.harborEndpoint, projects)
+	harborURL, err := url.Parse(d.harborEndpoint)
+	if err != nil {
+		return "", err
+	}
+	proxyMap := registriesToHarborProxies(harborURL.Host, projects)
 	registry, err := webhook.RegistryFromImageRef(imageRef)
 	if err != nil {
 		return "", err

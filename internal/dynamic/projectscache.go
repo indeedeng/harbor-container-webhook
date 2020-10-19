@@ -135,7 +135,7 @@ func (p *projectsCache) listAll(ctx context.Context) ([]models.Project, error) {
 	list = append(list, projects...)
 	for k, l := range group {
 		for l != nil && l.Rel == "next" {
-			projects, group, err = p.fetchProjects(ctx, l.URI)
+			projects, group, err = p.fetchProjects(ctx, p.harborEndpoint+l.URI)
 			if err != nil {
 				return []models.Project{}, fmt.Errorf("failed to list projects from %q: %w", l.URI, err)
 			}

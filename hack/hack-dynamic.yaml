@@ -1,0 +1,9 @@
+port: 9443
+cert_dir: "/tmp/hcw-certs"
+metrics_addr: ":8080"
+enable_leader_election: false
+dynamic:
+  resync_interval: 1m
+  timeout: 1m
+  skip_tls_verify: false
+  harbor_endpoint: https://harbor.awscmhinfra.k8s.indeed.tech

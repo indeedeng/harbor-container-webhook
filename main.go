@@ -5,7 +5,9 @@ Copyright 2020 Indeed.
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"os"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
@@ -41,6 +43,8 @@ func init() {
 }
 
 func main() {
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "path to the config for the harbor-container-webhook")
 	flag.Parse()
@@ -50,8 +54,7 @@ func main() {
 		setupLog.Error(err, "unable to read config from "+configPath)
 		os.Exit(1)
 	}
-
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	fmt.Printf("config: %#v\n", conf)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -69,10 +72,13 @@ func main() {
 	// +kubebuilder:scaffold:builder
 
 	var transformer webhook.ContainerTransformer
-	if conf.Dynamic.Enabled {
-		transformer = dynamic.NewTransformer(conf.Dynamic)
+	if conf.Dynamic != nil {
+		transformer = dynamic.NewTransformer(*conf.Dynamic)
+	} else if conf.Static != nil {
+		transformer = static.NewTransformer(*conf.Static)
 	} else {
-		transformer = static.NewTransformer(conf.Static)
+		setupLog.Error(errors.New("no static or dynamic config blocks supplied"), "unable to start harbor-container-webhook")
+		os.Exit(1)
 	}
 
 	decoder, _ := admission.NewDecoder(scheme)

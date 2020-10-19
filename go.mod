@@ -9,6 +9,8 @@ require (
 	github.com/peterhellberg/link v1.1.0
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+	golang.org/x/tools v0.0.0-20200213224642-88e652f7a869
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.6

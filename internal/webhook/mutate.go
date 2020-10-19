@@ -36,13 +36,16 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	initContainers, err := p.updateContainers(pod.Spec.InitContainers)
+	initContainers, updatedInit, err := p.updateContainers(pod.Spec.InitContainers)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	containers, err := p.updateContainers(pod.Spec.Containers)
+	containers, updated, err := p.updateContainers(pod.Spec.Containers)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if !updated && !updatedInit {
+		return admission.Allowed("no updates")
 	}
 	pod.Spec.InitContainers = initContainers
 	pod.Spec.Containers = containers
@@ -54,18 +57,22 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([]corev1.Container, error) {
+func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([]corev1.Container, bool, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
+	updated := false
 	for i := range containers {
 		container := containers[i]
 		imageRef, err := p.Transformer.RewriteImage(container.Image)
 		if err != nil {
-			return []corev1.Container{}, err
+			return []corev1.Container{}, false, err
+		}
+		if !updated {
+			updated = imageRef != container.Image
 		}
 		container.Image = imageRef
 		containersReplacement = append(containersReplacement, container)
 	}
-	return containersReplacement, nil
+	return containersReplacement, updated, nil
 }
 
 // podContainerProxier implements admission.DecoderInjector.
