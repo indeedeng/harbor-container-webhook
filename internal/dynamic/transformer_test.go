@@ -1,4 +1,4 @@
-package mutate
+package dynamic
 
 import (
 	"testing"
@@ -7,9 +7,11 @@ import (
 	"github.com/goharbor/harbor/src/replication/model"
 
 	"github.com/stretchr/testify/require"
+
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
 )
 
-func Test_registryProxies(t *testing.T) {
+func Test_registriesToHarborProxies(t *testing.T) {
 	type testcase struct {
 		description     string
 		projects        []projectWithSummary
@@ -30,18 +32,18 @@ func Test_registryProxies(t *testing.T) {
 					},
 					ProjectSummary: models.ProjectSummary{
 						Registry: &model.Registry{
-							URL: "https://" + bareRegistry,
+							URL: "https://" + mutate.BareRegistry,
 						},
 					},
 				},
 			},
 			expectedProxies: map[string]string{
-				bareRegistry: "harbor.example.com/proxy-cache",
+				mutate.BareRegistry: "harbor.example.com/proxy-cache",
 			},
 		},
 	}
 	for _, testcase := range testcases {
-		proxyMap := registryProxies("harbor.example.com", testcase.projects)
+		proxyMap := registriesToHarborProxies("harbor.example.com", testcase.projects)
 		require.Equal(t, testcase.expectedProxies, proxyMap, testcase.description)
 	}
 }

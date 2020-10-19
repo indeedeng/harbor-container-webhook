@@ -5,14 +5,13 @@ Copyright 2020 Indeed.
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"os"
-	"time"
 
-	"github.com/hashicorp/go-cleanhttp"
-
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/dynamic"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/mutate"
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/static"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -42,33 +41,25 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, harborAddr, certDir, resyncDur, timeoutDur string
-	var enableLeaderElection, skipVerify bool
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&harborAddr, "harbor-addr", ":8080", "The address the harbor binds to.")
-	flag.StringVar(&certDir, "cert-dir", "", "the directory that contains the server key and certificate.")
-	flag.StringVar(&resyncDur, "resync-interval", "1m", "how often projects & proxy cache registry info is refreshed from the harbor API")
-	flag.StringVar(&timeoutDur, "timeout", "1m", "default timeout for communicating with the harbor API")
-	flag.BoolVar(&skipVerify, "skip-verify", false, "skip TLS certificate verification of harbor")
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "path to the config for the harbor-container-webhook")
 	flag.Parse()
 
-	harborUser := os.Getenv("HARBOR_USER")
-	harborPass := os.Getenv("HARBOR_PASS")
-	resyncDuration := mustParseDuration(resyncDur)
-	timeoutDuration := mustParseDuration(timeoutDur)
+	conf, err := config.LoadConfiguration(configPath)
+	if err != nil {
+		setupLog.Error(err, "unable to read config from "+configPath)
+		os.Exit(1)
+	}
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
+		MetricsBindAddress: conf.MetricsAddr,
+		Port:               conf.Port,
+		LeaderElection:     conf.EnableLeaderElection,
 		LeaderElectionID:   "harbor-container-webhook",
-		CertDir:            certDir,
+		CertDir:            conf.CertDir,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start harbor-container-webhook")
@@ -76,26 +67,19 @@ func main() {
 	}
 
 	// +kubebuilder:scaffold:builder
-	client := cleanhttp.DefaultClient()
-	if skipVerify {
-		transport := cleanhttp.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
-		client.Transport = transport
-	}
-	client.Timeout = timeoutDuration
 
-	projectsCache := mutate.NewProjectsCache(client, harborAddr, harborUser, harborPass, resyncDuration)
-	go func() {
-		// query the cache once at startup to ensure it is filled
-		_, _ = projectsCache.List()
-	}()
+	var transformer mutate.ContainerTransformer
+	if conf.Dynamic.Enabled {
+		transformer = dynamic.NewTransformer(conf.Dynamic)
+	} else {
+		transformer = static.NewTransformer(conf.Static)
+	}
 
 	decoder, _ := admission.NewDecoder(scheme)
 	mutate := mutate.PodContainerProxier{
-		Client:         mgr.GetClient(),
-		Cache:          projectsCache,
-		Decoder:        decoder,
-		HarborEndpoint: harborAddr,
+		Client:      mgr.GetClient(),
+		Decoder:     decoder,
+		Transformer: transformer,
 	}
 
 	mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{Handler: &mutate})
@@ -105,13 +89,4 @@ func main() {
 		setupLog.Error(err, "problem running harbor-container-webhook")
 		os.Exit(1)
 	}
-}
-
-func mustParseDuration(s string) time.Duration {
-	dur, err := time.ParseDuration(s)
-	if err != nil {
-		setupLog.Error(err, "invalid duration: "+s)
-		os.Exit(1)
-	}
-	return dur
 }

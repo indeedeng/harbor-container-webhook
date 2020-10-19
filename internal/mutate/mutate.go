@@ -7,18 +7,24 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+var logger = ctrl.Log.WithName("mutate")
+
 // +kubebuilder:webhook:path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
+
+type ContainerTransformer interface {
+	RewriteImage(imageRef string) (string, error)
+}
 
 // PodContainerProxier mutates init containers and containers to redirect them to the harbor proxy cache if one exists.
 type PodContainerProxier struct {
-	Client         client.Client
-	Decoder        *admission.Decoder
-	Cache          ProjectsCache
-	HarborEndpoint string
+	Client      client.Client
+	Decoder     *admission.Decoder
+	Transformer ContainerTransformer
 }
 
 // Handle mutates init containers and containers.
@@ -30,17 +36,11 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	projects, err := p.Cache.List()
+	initContainers, err := p.updateContainers(pod.Spec.InitContainers)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	proxyMap := registryProxies(p.HarborEndpoint, projects)
-
-	initContainers, err := p.updateContainers(pod.Spec.InitContainers, proxyMap)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	containers, err := p.updateContainers(pod.Spec.Containers, proxyMap)
+	containers, err := p.updateContainers(pod.Spec.Containers)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -54,11 +54,11 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-func (p *PodContainerProxier) updateContainers(containers []corev1.Container, proxyMap map[string]string) ([]corev1.Container, error) {
+func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([]corev1.Container, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
 	for i := range containers {
 		container := containers[i]
-		imageRef, err := p.rewriteImage(container.Image, proxyMap)
+		imageRef, err := p.Transformer.RewriteImage(container.Image)
 		if err != nil {
 			return []corev1.Container{}, err
 		}
@@ -66,18 +66,6 @@ func (p *PodContainerProxier) updateContainers(containers []corev1.Container, pr
 		containersReplacement = append(containersReplacement, container)
 	}
 	return containersReplacement, nil
-}
-
-func (p *PodContainerProxier) rewriteImage(imageRef string, proxyMap map[string]string) (string, error) {
-	registry, err := RegistryFromImageRef(imageRef)
-	if err != nil {
-		return "", err
-	}
-
-	if rewrite, ok := proxyMap[registry]; ok {
-		return ReplaceRegistryInImageRef(imageRef, rewrite)
-	}
-	return "", nil
 }
 
 // podContainerProxier implements admission.DecoderInjector.

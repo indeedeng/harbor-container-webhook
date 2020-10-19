@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_registryFromImageRef(t *testing.T) {
+func Test_RegistryFromImageRef(t *testing.T) {
 	type testcase struct {
 		description      string
 		imageRef         string
@@ -54,6 +54,11 @@ func Test_registryFromImageRef(t *testing.T) {
 			expectedRegistry: "example.com",
 		},
 		{
+			description:      "image reference with url, project and no image tag set",
+			imageRef:         "example.com/nginxinc/nginx-unprivileged",
+			expectedRegistry: "example.com",
+		},
+		{
 			description:      "image reference with url and image sha set",
 			imageRef:         "example.com/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
 			expectedRegistry: "example.com",
@@ -61,17 +66,22 @@ func Test_registryFromImageRef(t *testing.T) {
 		{
 			description:      "bare image reference with image tag set",
 			imageRef:         "busybox:latest",
-			expectedRegistry: bareRegistry,
+			expectedRegistry: BareRegistry,
+		},
+		{
+			description:      "bare image reference with project and no image tag set",
+			imageRef:         "nginxinc/nginx-unprivileged",
+			expectedRegistry: BareRegistry,
 		},
 		{
 			description:      "bare image reference with and no image tag set",
 			imageRef:         "busybox",
-			expectedRegistry: bareRegistry,
+			expectedRegistry: BareRegistry,
 		},
 		{
 			description:      "bare image reference with image sha set",
 			imageRef:         "busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
-			expectedRegistry: bareRegistry,
+			expectedRegistry: BareRegistry,
 		},
 	}
 	for _, testcase := range tests {
@@ -81,12 +91,49 @@ func Test_registryFromImageRef(t *testing.T) {
 	}
 }
 
-func Test_registryFromImageRef_EmptyErr(t *testing.T) {
+func Test_IsLibraryImage(t *testing.T) {
+	type testcase struct {
+		imageRef string
+		expected bool
+	}
+	tests := []testcase{
+		{
+			imageRef: "nginxinc/nginx-unprivileged",
+			expected: false,
+		},
+		{
+			imageRef: "nginx",
+			expected: true,
+		},
+		{
+			imageRef: "nginxinc/nginx-unprivileged:v1.19.0",
+			expected: false,
+		},
+		{
+			imageRef: "nginx:v1.19.0",
+			expected: true,
+		},
+		{
+			imageRef: "nginxinc/nginx-unprivileged@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			expected: false,
+		},
+		{
+			imageRef: "nginx@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			expected: true,
+		},
+	}
+	for _, test := range tests {
+		actual := IsLibraryImage(test.imageRef)
+		require.Equal(t, test.expected, actual, test.imageRef)
+	}
+}
+
+func Test_RegistryFromImageRef_EmptyErr(t *testing.T) {
 	_, err := RegistryFromImageRef("")
 	require.EqualError(t, err, "image reference `` invalid, unable to parse registry or image name")
 }
 
-func Test_replaceRegistryInImageRef(t *testing.T) {
+func Test_ReplaceRegistryInImageRef(t *testing.T) {
 	type testcase struct {
 		description string
 		imageRef    string

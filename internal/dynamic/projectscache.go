@@ -1,4 +1,4 @@
-package mutate
+package dynamic
 
 import (
 	"context"

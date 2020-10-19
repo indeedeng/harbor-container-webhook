@@ -15,4 +15,5 @@ require (
 	oss.indeed.com/go/go-groups v1.1.3 // indirect
 	oss.indeed.com/go/go-opine v1.0.0 // indirect
 	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/yaml v1.2.0
 )
