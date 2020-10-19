@@ -1,0 +1,26 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "harbor-container-webhook.name" . }}
+webhooks:
+  - name: {{ include "harbor-container-webhook.name" . }}.{{ .Release.Namespace }}.svc
+    sideEffects: None
+    reinvocationPolicy: IfNeeded
+    admissionReviewVersions:
+      - v1beta1
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - "v1"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+    failurePolicy: Ignore
+    clientConfig:
+      service:
+        name: {{ include "harbor-container-webhook.name" . }}
+        namespace: {{ .Release.Namespace }}
+        path: "webhook-v1-pod"

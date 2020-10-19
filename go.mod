@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/agext/regexp v1.3.0
+	github.com/docker/distribution v2.7.1+incompatible
 	github.com/goharbor/harbor/src v0.0.0-20200930121830-5293c8ff4b67
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/peterhellberg/link v1.1.0

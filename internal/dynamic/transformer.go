@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"crypto/tls"
+	"errors"
 	"net/url"
 	"os"
 
@@ -30,10 +31,6 @@ func NewTransformer(conf config.DynamicProxy) webhook.ContainerTransformer {
 	client.Timeout = conf.Timeout
 
 	projectsCache := NewProjectsCache(client, conf.HarborEndpoint, harborUser, harborPass, conf.ResyncInterval)
-	// query the cache once at startup to ensure it is filled
-	if _, err := projectsCache.List(); err != nil {
-		panic(err)
-	}
 
 	return &dynamicTransformer{
 		cache:          projectsCache,
@@ -41,11 +38,19 @@ func NewTransformer(conf config.DynamicProxy) webhook.ContainerTransformer {
 	}
 }
 
+func (d *dynamicTransformer) Ready() error {
+	if d.cache.Ready() {
+		return nil
+	}
+	return errors.New("harbor projects cache is unready")
+}
+
 func (d *dynamicTransformer) RewriteImage(imageRef string) (string, error) {
-	projects, err := d.cache.List()
-	if err != nil {
+	if err := d.Ready(); err != nil {
 		return "", err
 	}
+
+	projects := d.cache.List()
 	harborURL, err := url.Parse(d.harborEndpoint)
 	if err != nil {
 		return "", err

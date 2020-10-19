@@ -1,8 +1,8 @@
 port: 9443
 cert_dir: ""
 metrics_addr: ":8080"
-enable_leader_election: false
+health_addr: ":8090"
 static:
   registry_caches:
     registry.hub.docker.com:
-      "harbor.awscmhinfra.k8s.indeed.tech/dockerhub-proxy"
+      "harbor.example.com/dockerhub-proxy"

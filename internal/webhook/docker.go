@@ -7,7 +7,7 @@ import (
 	"github.com/agext/regexp"
 )
 
-var dockerRegistry = regexp.MustCompile(`^(?P<registry>([a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62}){1}(\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})*[\._]?:?[0-9]*)\/?(?P<imgname>.*)$`)
+var dockerRegistry = regexp.MustCompile(`^(?P<registry>([a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62}){1}(?:(?:\.[a-zA-Z0-9_]{1}[a-zA-Z0-9_-]{0,62})+|:?[0-9]+)[\._]?:?[0-9]*)\/?(?P<imgname>.*)$`)
 
 const BareRegistry = "registry.hub.docker.com"
 
@@ -19,10 +19,11 @@ func RegistryFromImageRef(imageReference string) (registry string, err error) {
 			return BareRegistry, nil
 		}
 		matches := dockerRegistry.FindStringNamed(imageReference)
-		// check if the reference has any private registry prefix
 		if registry, ok := matches["registry"]; ok {
 			return registry, nil
 		}
+
+		return BareRegistry, nil
 	}
 	// only possible if we were given nonsense
 	return "", fmt.Errorf("image reference `%s` invalid, unable to parse registry or image name", imageReference)

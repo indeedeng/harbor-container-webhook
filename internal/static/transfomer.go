@@ -21,6 +21,10 @@ func (s *staticTransformer) RewriteImage(imageRef string) (string, error) {
 	return imageRef, nil
 }
 
+func (s *staticTransformer) Ready() error {
+	return nil
+}
+
 var _ webhook.ContainerTransformer = (*staticTransformer)(nil)
 
 func NewTransformer(conf config.StaticProxy) webhook.ContainerTransformer {

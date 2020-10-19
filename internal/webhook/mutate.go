@@ -18,6 +18,7 @@ var logger = ctrl.Log.WithName("webhook")
 
 type ContainerTransformer interface {
 	RewriteImage(imageRef string) (string, error)
+	Ready() error
 }
 
 // PodContainerProxier mutates init containers and containers to redirect them to the harbor proxy cache if one exists.

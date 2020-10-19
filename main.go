@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
@@ -24,6 +25,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -57,12 +59,12 @@ func main() {
 	fmt.Printf("config: %#v\n", conf)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: conf.MetricsAddr,
-		Port:               conf.Port,
-		LeaderElection:     conf.EnableLeaderElection,
-		LeaderElectionID:   "harbor-container-webhook",
-		CertDir:            conf.CertDir,
+		Scheme:                 scheme,
+		MetricsBindAddress:     conf.MetricsAddr,
+		HealthProbeBindAddress: conf.HealthAddr,
+		Port:                   conf.Port,
+		LeaderElection:         false,
+		CertDir:                conf.CertDir,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start harbor-container-webhook")
@@ -78,6 +80,17 @@ func main() {
 		transformer = static.NewTransformer(*conf.Static)
 	} else {
 		setupLog.Error(errors.New("no static or dynamic config blocks supplied"), "unable to start harbor-container-webhook")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddHealthzCheck("health-ping", healthz.Ping); err != nil {
+		setupLog.Error(err, "Unable add a liveness check to harbor-container-webhook")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("ready-ping", func(_ *http.Request) error {
+		return transformer.Ready()
+	}); err != nil {
+		setupLog.Error(err, "Unable add a readiness check to harbor-container-webhook")
 		os.Exit(1)
 	}
 

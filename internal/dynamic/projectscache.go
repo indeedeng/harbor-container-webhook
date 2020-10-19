@@ -38,6 +38,7 @@ type projectsCache struct {
 
 	lock struct {
 		sync.RWMutex
+		ready      bool
 		projects   []projectWithSummary
 		expiration time.Time
 	}
@@ -58,10 +59,11 @@ func NewProjectsCache(client *http.Client, harborEndpoint, harborUser, harborPas
 var _ ProjectsCache = (*projectsCache)(nil)
 
 type ProjectsCache interface {
-	List() ([]projectWithSummary, error)
+	List() []projectWithSummary
+	Ready() bool
 }
 
-func (p *projectsCache) List() ([]projectWithSummary, error) {
+func (p *projectsCache) List() []projectWithSummary {
 	if !p.cacheValid() {
 		logger.Info("cache out of date, serving stale projects")
 		go func() {
@@ -74,7 +76,14 @@ func (p *projectsCache) List() ([]projectWithSummary, error) {
 	}
 	p.lock.RLock()
 	defer p.lock.RUnlock()
-	return p.lock.projects, nil
+	return p.lock.projects
+}
+
+// Ready is true if the cache has ever initialized at least once
+func (p *projectsCache) Ready() bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return p.lock.ready
 }
 
 func (p *projectsCache) cacheValid() bool {
@@ -100,6 +109,7 @@ func (p *projectsCache) updateCache() error {
 	}
 	p.lock.Lock()
 	defer p.lock.Unlock()
+	p.lock.ready = true
 	p.lock.projects = projectsWithSummary
 	p.lock.expiration = time.Now().Add(p.resyncInterval)
 	return nil

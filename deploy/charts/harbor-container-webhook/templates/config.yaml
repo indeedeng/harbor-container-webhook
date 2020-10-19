@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "harbor-container-webhook.fullname" . }}
+  labels:
+    {{- include "harbor-container-webhook.labels" . | nindent 4 }}
+data:
+  webhook-config.yaml: |
+    port: {{ .Values.service.port }}
+    cert_dir: "{{ .Values.certDir }}"
+    metrics_addr: ":{{ .Values.prometheus.port }}"
+    health_addr: ":{{ .Values.healthPort }}"
+    {{- if eq .Values.mode "dynamic" }}
+    dynamic:
+      resync_interval: {{ .Values.harbor.resyncInterval }}
+      timeout: {{ .Values.harbor.timeout }}
+      skip_tls_verify: {{ .Values.harbor.skipTLSVerify }}
+      harbor_endpoint: {{ .Values.harbor.endpoint }}
+    {{- else if eq .Values.mode "static" }}
+    static:
+    {{- .Values.static | toYaml | nindent 6 }}
+    {{- end }}
