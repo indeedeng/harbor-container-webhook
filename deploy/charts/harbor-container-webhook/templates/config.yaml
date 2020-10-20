@@ -7,7 +7,11 @@ metadata:
 data:
   webhook-config.yaml: |
     port: {{ .Values.service.port }}
+    {{- if .Values.certManager.enabled }}
+    cert_dir: "/etc/hcw/certs"
+    {{- else }}
     cert_dir: "{{ .Values.certDir }}"
+    {{- end }}
     metrics_addr: ":{{ .Values.prometheus.port }}"
     health_addr: ":{{ .Values.healthPort }}"
     {{- if eq .Values.mode "dynamic" }}

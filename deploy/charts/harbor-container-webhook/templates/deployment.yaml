@@ -11,10 +11,14 @@ spec:
       {{- include "harbor-container-webhook.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-    {{- with .Values.podAnnotations }}
       annotations:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
+        checksum/configmap: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+        {{- if .Values.harbor.credentials.pass }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
       labels:
         {{- include "harbor-container-webhook.selectorLabels" . | nindent 8 }}
     spec:
@@ -28,7 +32,7 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           args:
-            - --config=/etc/harbor-container-webhook.yaml
+            - --config=/etc/hcw/config/webhook-config.yaml
             {{- range $arg := .Values.extraArgs }}
             - {{ $arg }}
             {{- end }}
@@ -60,13 +64,23 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
-            - mountPath: /etc/harbor-container-webhook.yaml
+            - mountPath: /etc/hcw/config
               name: config
               readOnly: true
+            {{- if .Values.certManager.enabled }}
+            - mountPath: /etc/hcw/certs
+              name: certs
+              readOnly: true
+            {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ include "harbor-container-webhook.fullname" . }}
+        {{- if .Values.certManager.enabled }}
+        - name: certs
+          secret:
+            secretName: {{ include "harbor-container-webhook.fullname" . }}-certs
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -2,6 +2,10 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{ include "harbor-container-webhook.name" . }}
+  {{- if .Values.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ include "harbor-container-webhook.name" . }}"
+  {{- end }}
 webhooks:
   - name: {{ include "harbor-container-webhook.name" . }}.{{ .Release.Namespace }}.svc
     sideEffects: None
@@ -23,4 +27,4 @@ webhooks:
       service:
         name: {{ include "harbor-container-webhook.name" . }}
         namespace: {{ .Release.Namespace }}
-        path: "webhook-v1-pod"
+        path: "/webhook-v1-pod"

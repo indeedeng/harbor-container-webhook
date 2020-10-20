@@ -28,13 +28,13 @@ podAnnotations: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
 
 service:
   type: ClusterIP
@@ -60,6 +60,10 @@ affinity: {}
 
 extraArgs: []
 extraEnv: []
+
+certManager:
+  enabled: true
+  apiVersion: "cert-manager.io/v1alpha2"
 
 ## configures the webhook mode (dynamic or static).
 ## dynamic mode queries the Harbor API to discover projects, and find projects in harbor with a proxy cache.
