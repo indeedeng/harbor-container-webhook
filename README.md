@@ -3,9 +3,13 @@
 
 # Project Overview
 
-harbor-container-webhook is a kubernetes mutating webhook controller which inspects pod requests to a kubernetes
-cluster and replaces the container image registry with the same image from a Harbor proxy cache if a 
-proxy cache for the image reference registry exists.
+harbor-container-webhook is a kubernetes mutating webhook which rewrites container images to use a Harbor proxy cache.
+This is typically useful for mirroring public registries that have low rate limits, such as dockerhub, or limiting
+public bandwidth usage, by mirroring images in a local Harbor registry. 
+
+harbor-container webhook inspects pod requests in a kubernetes cluster and rewrites the container image registry of
+matching images with a known proxy cache to the Harbor proxy cache location. This is achieved either thru dynamic
+discovery of available proxies or static manual configuration. Both modes of running the webhook have pros & cons.
 
 # Modes
 
