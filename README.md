@@ -54,6 +54,16 @@ Example configuration for both modes of the webhook exist in docs/example-config
 
 deploy/charts contains a helm chart which can deploy the harbor-container-webhook.
 
+# Contributing
+
+We welcome contributions! Feel free to help make the harbor-container-webhook better.
+
+# Code of Conduct
+
+harbor-container-webhook is governed by the [Contributer Covenant v1.4.1](CODE_OF_CONDUCT.md)
+
+For more information please contact opensource@indeed.com.
+
 # License
 
-The harbor-container-webhooks is open source under the [Apache 2](LICENSE) license.
+The harbor-container-webhook is open source under the [Apache 2](LICENSE) license.
