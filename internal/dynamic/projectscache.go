@@ -58,6 +58,8 @@ func NewProjectsCache(client *http.Client, harborEndpoint, harborUser, harborPas
 
 var _ ProjectsCache = (*projectsCache)(nil)
 
+//go:generate go run github.com/vektra/mockery/v2 --name ProjectsCache --output . --outpkg dynamic --filename mock_projects_cache.go --structname mockProjectsCache --inpackage --disable-version-string
+
 type ProjectsCache interface {
 	List() []projectWithSummary
 	Ready() bool
@@ -79,7 +81,7 @@ func (p *projectsCache) List() []projectWithSummary {
 	return p.lock.projects
 }
 
-// Ready is true if the cache has ever initialized at least once
+// Ready is true if the cache has ever initialized at least once.
 func (p *projectsCache) Ready() bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()

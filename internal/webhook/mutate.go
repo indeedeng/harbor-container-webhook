@@ -7,17 +7,18 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var logger = ctrl.Log.WithName("webhook")
-
 // +kubebuilder:webhook:path=/webhook-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
 
+// ContainerTransformer rewrites docker image references for harbor proxy cache projects.
 type ContainerTransformer interface {
+	// RewriteImage takes a docker image reference and returns the same image reference rewritten for a harbor
+	// proxy cache project endpoint, if one is available, else returns the original image reference.
 	RewriteImage(imageRef string) (string, error)
+	// Ready returns nil if the transformer is ready to do work.
 	Ready() error
 }
 

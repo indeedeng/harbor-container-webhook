@@ -7,5 +7,7 @@
 package tools
 
 import (
+	_ "github.com/vektra/mockery/v2/cmd"
+
 	_ "oss.indeed.com/go/go-groups"
 )
