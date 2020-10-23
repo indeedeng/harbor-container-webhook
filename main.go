@@ -7,7 +7,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -56,7 +55,6 @@ func main() {
 		setupLog.Error(err, "unable to read config from "+configPath)
 		os.Exit(1)
 	}
-	fmt.Printf("config: %#v\n", conf)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
