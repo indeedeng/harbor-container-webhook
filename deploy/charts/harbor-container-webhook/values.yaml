@@ -83,6 +83,7 @@ prometheus:
   enabled: true
   port: 8080
 healthPort: 8090
+verbose: false
 
 dynamic:
   resync_interval: 1m

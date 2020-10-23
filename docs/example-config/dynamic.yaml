@@ -2,6 +2,7 @@ port: 9443
 cert_dir: ""
 metrics_addr: ":8080"
 health_addr: ":8090"
+verbose: false
 dynamic:
   resync_interval: 1m
   timeout: 1m

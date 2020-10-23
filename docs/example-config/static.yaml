@@ -2,6 +2,7 @@ port: 9443
 cert_dir: ""
 metrics_addr: ":8080"
 health_addr: ":8090"
+verbose: false
 static:
   registry_caches:
     registry.hub.docker.com:

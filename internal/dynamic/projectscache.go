@@ -29,8 +29,14 @@ type projectWithSummary struct {
 	models.ProjectSummary //nolint:govet
 }
 
+//go:generate go run github.com/vektra/mockery/v2 --name HTTPDoer --output . --outpkg dynamic --filename mock_http_client.go --structname mockHTTPDoer --inpackage --disable-version-string
+
+type HTTPDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
 type projectsCache struct {
-	client         *http.Client
+	client         HTTPDoer
 	harborEndpoint string
 	authHeader     string
 	pageSize       int

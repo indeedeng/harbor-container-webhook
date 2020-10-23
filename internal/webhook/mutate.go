@@ -3,15 +3,19 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/webhook-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
+
+var logger = ctrl.Log.WithName("mutator")
 
 // ContainerTransformer rewrites docker image references for harbor proxy cache projects.
 type ContainerTransformer interface {
@@ -27,6 +31,7 @@ type PodContainerProxier struct {
 	Client      client.Client
 	Decoder     *admission.Decoder
 	Transformer ContainerTransformer
+	Verbose     bool
 }
 
 // Handle mutates init containers and containers.
@@ -56,6 +61,9 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
+	if p.Verbose {
+		logger.Info(fmt.Sprintf("rewritten pod spec: %#v", pod.Spec))
+	}
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
@@ -70,6 +78,9 @@ func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([
 		}
 		if !updated {
 			updated = imageRef != container.Image
+		}
+		if imageRef != container.Image {
+			logger.Info(fmt.Sprintf("rewriting the image of %q from %q to %q", container.Name, container.Image, imageRef))
 		}
 		container.Image = imageRef
 		containersReplacement = append(containersReplacement, container)

@@ -34,6 +34,7 @@ type Configuration struct {
 	HealthAddr string        `yaml:"health_addr"`
 	Dynamic    *DynamicProxy `yaml:"dynamic"`
 	Static     *StaticProxy  `yaml:"static"`
+	Verbose    bool          `yaml:"verbose"`
 }
 
 // DynamicProxy queries the Harbor API to discover projects, and find projects in harbor with a proxy cache
