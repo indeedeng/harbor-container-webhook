@@ -14,7 +14,7 @@ data:
     {{- end }}
     metrics_addr: ":{{ .Values.prometheus.port }}"
     health_addr: ":{{ .Values.healthPort }}"
-    verbose: "{{ .Values.verbose }}"
+    verbose: {{ .Values.verbose }}
     {{- if eq .Values.mode "dynamic" }}
     dynamic:
       resync_interval: {{ .Values.harbor.resyncInterval }}
