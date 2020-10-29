@@ -4,6 +4,7 @@ metadata:
   name: {{ include "harbor-container-webhook.fullname" . }}
   labels:
     {{- include "harbor-container-webhook.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 data:
   webhook-config.yaml: |
     port: {{ .Values.service.port }}

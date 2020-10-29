@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"gomodules.xyz/jsonpatch/v2"
+
 	corev1 "k8s.io/api/core/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -62,7 +64,10 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	if p.Verbose {
-		logger.Info(fmt.Sprintf("rewritten pod spec: %#v", pod.Spec))
+		patch, err := jsonpatch.CreatePatch(req.Object.Raw, marshaledPod)
+		if err == nil { // errors will be surfaced in return below
+			logger.Info(fmt.Sprintf("patch for %s: %v", string(pod.UID), patch))
+		}
 	}
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }

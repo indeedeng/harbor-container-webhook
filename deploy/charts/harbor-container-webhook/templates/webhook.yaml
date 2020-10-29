@@ -6,9 +6,11 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ include "harbor-container-webhook.fullname" . }}"
   {{- end }}
+  namespace: {{ .Release.Namespace }}
 webhooks:
   - name: {{ include "harbor-container-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
     sideEffects: None
+    matchPolicy: Equivalent
     reinvocationPolicy: IfNeeded
     admissionReviewVersions:
       - v1beta1
@@ -22,9 +24,17 @@ webhooks:
           - UPDATE
         resources:
           - pods
-    failurePolicy: Ignore
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
     clientConfig:
       service:
         name: {{ include "harbor-container-webhook.fullname" . }}
         namespace: {{ .Release.Namespace }}
         path: "/webhook-v1-pod"
+    {{- if .Values.webhook.namespaceSelector }}
+    namespaceSelector:
+      {{- .Values.webhook.namespaceSelector | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if .Values.webhook.objectSelector }}
+    objectSelector:
+      {{- .Values.webhook.objectSelector | toYaml | nindent 6 }}
+    {{- end }}

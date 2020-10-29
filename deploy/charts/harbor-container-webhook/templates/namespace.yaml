@@ -1,0 +1,9 @@
+{{- if .Values.manageNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    {{- include "harbor-container-webhook.labels" . | nindent 4 }}
+    goharbor.io/harbor-container-webhook-rewrite: "false"
+  {{- end }}

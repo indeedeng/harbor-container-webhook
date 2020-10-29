@@ -4,13 +4,12 @@ metadata:
   name: {{ include "harbor-container-webhook.fullname" . }}
   labels:
     {{- include "harbor-container-webhook.labels" . | nindent 4 }}
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   type: {{ .Values.service.type }}
   ports:
     - port: 443
       protocol: TCP
       targetPort: https
-
   selector:
     {{- include "harbor-container-webhook.selectorLabels" . | nindent 4 }}

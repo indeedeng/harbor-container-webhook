@@ -8,7 +8,7 @@ image:
   repository: indeed/harbor-container-webhook
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart version.
-  tag: ""
+  tag: "v0.1.2"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -26,12 +26,11 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext: {}
-  # fsGroup: 2000
 
 securityContext:
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
   runAsUser: 65532
@@ -41,16 +40,6 @@ service:
   port: 9443
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 nodeSelector: {}
 
@@ -64,6 +53,21 @@ extraEnv: []
 certManager:
   enabled: true
   apiVersion: "cert-manager.io/v1alpha2"
+
+manageNamespace: true
+
+webhook:
+  namespaceSelector:
+    matchExpressions:
+      - key: "goharbor.io/harbor-container-webhook-rewrite"
+        operator: NotIn
+        values: ["false"]
+  objectSelector:
+    matchExpressions:
+      - key: "goharbor.io/harbor-container-webhook-rewrite"
+        operator: NotIn
+        values: ["false"]
+  failurePolicy: Ignore
 
 ## configures the webhook mode (dynamic or static).
 ## dynamic mode queries the Harbor API to discover projects, and find projects in harbor with a proxy cache.
