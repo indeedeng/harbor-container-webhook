@@ -5,5 +5,4 @@ health_addr: ":8090"
 verbose: false
 static:
   registry_caches:
-    registry.hub.docker.com:
-      "harbor.example.com/dockerhub-proxy"
+    docker.io: "harbor.example.com/dockerhub-proxy"

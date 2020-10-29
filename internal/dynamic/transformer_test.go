@@ -61,7 +61,7 @@ func TestDynamicTransformer_RewriteImage(t *testing.T) {
 			ProjectSummary: models.ProjectSummary{
 				Registry: &model.Registry{
 					Name: "dockerhub",
-					URL:  "https://registry.hub.docker.com",
+					URL:  "https://docker.io",
 				},
 			},
 		},
@@ -97,18 +97,18 @@ func TestDynamicTransformer_RewriteImage(t *testing.T) {
 		},
 		{
 			description: "an image from dockerhub should be rewritten",
-			image:       "registry.hub.docker.com/library/ubuntu:latest",
+			image:       "docker.io/library/ubuntu:latest",
 			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu:latest",
 		},
 		{
 			description: "an image from the std library should be rewritten",
 			image:       "ubuntu",
-			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu",
+			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu:latest",
 		},
 		{
 			description: "an image from quz.example.com should be rewritten",
 			image:       "quz.example.com/example/quz",
-			expected:    "harbor.example.com/quz-proxy/example/quz",
+			expected:    "harbor.example.com/quz-proxy/example/quz:latest",
 		},
 	}
 

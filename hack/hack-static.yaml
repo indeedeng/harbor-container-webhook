@@ -4,5 +4,4 @@ metrics_addr: ":8080"
 enable_leader_election: false
 static:
   registry_caches:
-    registry.hub.docker.com:
-      "harbor.awscmhinfra.k8s.indeed.tech/dockerhub-proxy"
+    docker.io: "harbor.example.com/dockerhub-proxy"

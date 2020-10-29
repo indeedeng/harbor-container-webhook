@@ -13,6 +13,26 @@ discovery of available proxies or static manual configuration. Both modes of run
 
 # Modes
 
+## Static Proxy Caching
+The static proxy caching mode uses configuration to tell the webhook what proxy caches exist, and what docker
+registries they exist for. For example, if you had created a project in Harbor named "dockerhub-cache", and configured
+the proxy cache for this project, then you could configure the static configuration as such:
+```
+static:
+  registry_caches:
+    docker.io: "harbor.example.com/dockerhub-cache"
+``` 
+
+Then the webhook would inspect every container (and init container) image, and if it matches the key, will be rewritten
+to use the specified value in its place.
+
+The static mode requires no secrets or credentials, and does not involve the webhook communicating with the Harbor API.
+
+**Limitations:**
+If you rename/delete the proxy cache project in Harbor and do not update the webhook configuration,
+the webhook will misconfigure containers in your cluster, likely resulting in downtime! If this possibility concerns you, 
+see the dynamic proxy caching.
+
 ## Dynamic Proxy Caching
 The dynamic proxy caching mode uses the harbor API to query & cache information on all of the projects configured in
 Harbor. The webhook inspects each project for any proxy-cache endpoints, and if discovered, will use the Harbor
@@ -29,30 +49,10 @@ credentials to query the API. These can be set via environment variables, `HARBO
 
 If using the Harbor admin credentials is not appealing to you, see the static proxy caching mode.
 
-## Static Proxy Caching
-The static proxy caching mode uses configuration to tell the webhook what proxy caches exist, and what docker
-registries they exist for. For example, if you had created a project in Harbor named "dockerhub-cache", and configured
-the proxy cache for this project, then you could configure the static configuration as such:
-```
-static:
-  registry_caches:
-    registry.hub.docker.com: "harbor.example.com/dockerhub-cache"
-``` 
-
-Then the webhook would inspect every container (and init container) image, and if it matches the key, will be rewritten
-to use the specified value in its place.
-
-The static mode requires no secrets or credentials, and does not involve the webhook communicating with the Harbor API.
-
-**Limitations:**
-If you rename/delete the proxy cache project in Harbor and do not update the webhook configuration,
-the webhook will misconfigure containers in your cluster, likely resulting in downtime! If this possibility concerns you, 
-see the dynamic proxy caching.
-
 # Example Configuration:
 Example configuration for both modes of the webhook exist in docs/example-config:
-* [dynamic configuration](docs/example-config/dynamic.yaml)
 * [static configuration](docs/example-config/static.yaml)
+* [dynamic configuration](docs/example-config/dynamic.yaml)
 
 # Deployment
 

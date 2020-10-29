@@ -27,4 +27,4 @@ metadata:
     {{- include "harbor-container-webhook.labels" . | nindent 4 }}
 spec:
   selfSigned: {}
-  {{- end }}
+{{- end }}
