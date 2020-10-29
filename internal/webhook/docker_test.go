@@ -78,43 +78,6 @@ func Test_RegistryFromImageRef(t *testing.T) {
 	}
 }
 
-func Test_IsLibraryImage(t *testing.T) {
-	type testcase struct {
-		imageRef string
-		expected bool
-	}
-	tests := []testcase{
-		{
-			imageRef: "nginxinc/nginx-unprivileged",
-			expected: false,
-		},
-		{
-			imageRef: "nginx",
-			expected: true,
-		},
-		{
-			imageRef: "nginxinc/nginx-unprivileged:v1.19.0",
-			expected: false,
-		},
-		{
-			imageRef: "nginx:v1.19.0",
-			expected: true,
-		},
-		{
-			imageRef: "nginxinc/nginx-unprivileged@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
-			expected: false,
-		},
-		{
-			imageRef: "nginx@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
-			expected: true,
-		},
-	}
-	for _, test := range tests {
-		actual := IsLibraryImage(test.imageRef)
-		require.Equal(t, test.expected, actual, test.imageRef)
-	}
-}
-
 func Test_RegistryFromImageRef_EmptyErr(t *testing.T) {
 	_, err := RegistryFromImageRef("")
 	require.EqualError(t, err, reference.ErrReferenceInvalidFormat.Error())
