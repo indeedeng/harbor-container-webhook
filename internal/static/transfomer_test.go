@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 )
 
 func TestStaticTransformer_Ready(t *testing.T) {
@@ -13,7 +15,7 @@ func TestStaticTransformer_Ready(t *testing.T) {
 
 func TestStaticTransformer_RewriteImage(t *testing.T) {
 	transformer := &staticTransformer{
-		proxyMap: map[string]string{"registry.hub.docker.com": "harbor.example.com/dockerhub-proxy"},
+		proxyMap: map[string]string{webhook.BareRegistry: "harbor.example.com/dockerhub-proxy"},
 	}
 
 	type testcase struct {
@@ -34,13 +36,13 @@ func TestStaticTransformer_RewriteImage(t *testing.T) {
 		},
 		{
 			description: "an image from dockerhub should be rewritten",
-			image:       "registry.hub.docker.com/library/ubuntu:latest",
+			image:       "docker.io/library/ubuntu:latest",
 			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu:latest",
 		},
 		{
 			description: "an image from the std library should be rewritten",
 			image:       "ubuntu",
-			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu",
+			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu:latest",
 		},
 	}
 	for _, testcase := range tests {

@@ -5,10 +5,11 @@ metadata:
   name: {{ include "harbor-container-webhook.fullname" . }}
   labels:
     {{- include "harbor-container-webhook.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 spec:
   secretName: {{ include "harbor-container-webhook.fullname" . }}-certs
-  duration: 2160h
-  renewBefore: 360h
+  duration: 2160h0m0s
+  renewBefore: 360h0m0s
   commonName: {{ include "harbor-container-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
   dnsNames:
     - {{ include "harbor-container-webhook.fullname" . }}

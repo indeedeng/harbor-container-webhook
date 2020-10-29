@@ -4,6 +4,7 @@ metadata:
   name: {{ include "harbor-container-webhook.fullname" . }}
   labels:
     {{- include "harbor-container-webhook.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -21,6 +22,7 @@ spec:
         {{- end }}
       labels:
         {{- include "harbor-container-webhook.selectorLabels" . | nindent 8 }}
+        goharbor.io/harbor-container-webhook-disable: "true"
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

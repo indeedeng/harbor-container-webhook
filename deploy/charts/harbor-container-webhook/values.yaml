@@ -8,7 +8,7 @@ image:
   repository: indeed/harbor-container-webhook
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart version.
-  tag: ""
+  tag: "0.2.0"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -26,7 +26,6 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext: {}
-  # fsGroup: 2000
 
 securityContext:
   capabilities:
@@ -41,16 +40,6 @@ service:
   port: 9443
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 nodeSelector: {}
 
@@ -64,6 +53,19 @@ extraEnv: []
 certManager:
   enabled: true
   apiVersion: "cert-manager.io/v1alpha2"
+
+webhook:
+  namespaceSelector:
+    matchExpressions:
+      - key: "goharbor.io/harbor-container-webhook-disable"
+        operator: NotIn
+        values: ["true"]
+  objectSelector:
+    matchExpressions:
+      - key: "goharbor.io/harbor-container-webhook-disable"
+        operator: NotIn
+        values: ["true"]
+  failurePolicy: Ignore
 
 ## configures the webhook mode (dynamic or static).
 ## dynamic mode queries the Harbor API to discover projects, and find projects in harbor with a proxy cache.
@@ -92,4 +94,4 @@ dynamic:
   harbor_endpoint: https://harbor.example.com
 static:
   registry_caches: {}
-#    registry.hub.docker.com: "harbor.example.com/dockerhub-proxy"
+#    docker.io: "harbor.example.com/dockerhub-proxy"

@@ -97,6 +97,7 @@ func main() {
 		Client:      mgr.GetClient(),
 		Decoder:     decoder,
 		Transformer: transformer,
+		Verbose:     conf.Verbose,
 	}
 
 	mgr.GetWebhookServer().Register("/webhook-v1-pod", &ctrlwebhook.Admission{Handler: &mutate})

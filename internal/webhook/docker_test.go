@@ -3,6 +3,8 @@ package webhook
 import (
 	"testing"
 
+	"github.com/containers/image/v5/docker/reference"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,18 +17,18 @@ func Test_RegistryFromImageRef(t *testing.T) {
 	tests := []testcase{
 		{
 			description:      "image reference with hostname with port and image tag set",
-			imageRef:         "some_host:443/public/busybox:latest",
-			expectedRegistry: "some_host:443",
+			imageRef:         "somehost:443/public/busybox:latest",
+			expectedRegistry: "somehost:443",
 		},
 		{
 			description:      "image reference with hostname with port and no image tag set",
-			imageRef:         "some_host:443/public/busybox",
-			expectedRegistry: "some_host:443",
+			imageRef:         "somehost:443/public/busybox",
+			expectedRegistry: "somehost:443",
 		},
 		{
 			description:      "image reference with hostname with port and image sha set",
-			imageRef:         "some_host:443/public/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
-			expectedRegistry: "some_host:443",
+			imageRef:         "somehost:443/public/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
+			expectedRegistry: "somehost:443",
 		},
 		{
 			description:      "image reference with url and image tag set",
@@ -45,7 +47,7 @@ func Test_RegistryFromImageRef(t *testing.T) {
 		},
 		{
 			description:      "image reference with url and image sha set",
-			imageRef:         "example.com/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			imageRef:         "example.com/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 			expectedRegistry: "example.com",
 		},
 		{
@@ -65,57 +67,20 @@ func Test_RegistryFromImageRef(t *testing.T) {
 		},
 		{
 			description:      "bare image reference with image sha set",
-			imageRef:         "busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			imageRef:         "busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 			expectedRegistry: BareRegistry,
 		},
 	}
 	for _, testcase := range tests {
 		output, err := RegistryFromImageRef(testcase.imageRef)
-		require.NoError(t, err)
+		require.NoError(t, err, testcase.description)
 		require.Equal(t, testcase.expectedRegistry, output, testcase.description)
-	}
-}
-
-func Test_IsLibraryImage(t *testing.T) {
-	type testcase struct {
-		imageRef string
-		expected bool
-	}
-	tests := []testcase{
-		{
-			imageRef: "nginxinc/nginx-unprivileged",
-			expected: false,
-		},
-		{
-			imageRef: "nginx",
-			expected: true,
-		},
-		{
-			imageRef: "nginxinc/nginx-unprivileged:v1.19.0",
-			expected: false,
-		},
-		{
-			imageRef: "nginx:v1.19.0",
-			expected: true,
-		},
-		{
-			imageRef: "nginxinc/nginx-unprivileged@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
-			expected: false,
-		},
-		{
-			imageRef: "nginx@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
-			expected: true,
-		},
-	}
-	for _, test := range tests {
-		actual := IsLibraryImage(test.imageRef)
-		require.Equal(t, test.expected, actual, test.imageRef)
 	}
 }
 
 func Test_RegistryFromImageRef_EmptyErr(t *testing.T) {
 	_, err := RegistryFromImageRef("")
-	require.EqualError(t, err, "image reference `` invalid, unable to parse registry or image name")
+	require.EqualError(t, err, reference.ErrReferenceInvalidFormat.Error())
 }
 
 func Test_ReplaceRegistryInImageRef(t *testing.T) {
@@ -128,57 +93,57 @@ func Test_ReplaceRegistryInImageRef(t *testing.T) {
 	tests := []testcase{
 		{
 			description: "image reference with hostname with port and image tag set",
-			imageRef:    "some_host:443/public/busybox:latest",
+			imageRef:    "somehost:443/public/busybox:1.32.0",
+			newRegistry: "harbor.example.com/proxy-cache",
+			expectedRef: "harbor.example.com/proxy-cache/public/busybox:1.32.0",
+		},
+		{
+			description: "image reference with hostname with port and no image tag set",
+			imageRef:    "somehost:443/public/busybox",
 			newRegistry: "harbor.example.com/proxy-cache",
 			expectedRef: "harbor.example.com/proxy-cache/public/busybox:latest",
 		},
 		{
-			description: "image reference with hostname with port and no image tag set",
-			imageRef:    "some_host:443/public/busybox",
-			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/public/busybox",
-		},
-		{
 			description: "image reference with hostname with port and image sha set",
-			imageRef:    "some_host:443/public/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			imageRef:    "somehost:443/public/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/public/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			expectedRef: "harbor.example.com/proxy-cache/public/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 		},
 		{
 			description: "image reference with url and image tag set",
-			imageRef:    "example.com/busybox:latest",
+			imageRef:    "example.com/busybox:1.32.0",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/busybox:latest",
+			expectedRef: "harbor.example.com/proxy-cache/busybox:1.32.0",
 		},
 		{
 			description: "image reference with url and no image tag set",
 			imageRef:    "example.com/busybox",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/busybox",
+			expectedRef: "harbor.example.com/proxy-cache/busybox:latest",
 		},
 		{
 			description: "image reference with url and image sha set",
-			imageRef:    "example.com/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			imageRef:    "example.com/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			expectedRef: "harbor.example.com/proxy-cache/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 		},
 		{
 			description: "bare image reference with image tag set",
-			imageRef:    "busybox:latest",
+			imageRef:    "busybox:1.32.0",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/library/busybox:latest",
+			expectedRef: "harbor.example.com/proxy-cache/library/busybox:1.32.0",
 		},
 		{
 			description: "bare image reference with and no image tag set",
 			imageRef:    "busybox",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/library/busybox",
+			expectedRef: "harbor.example.com/proxy-cache/library/busybox:latest",
 		},
 		{
 			description: "bare image reference with image sha set",
-			imageRef:    "busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			imageRef:    "busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 			newRegistry: "harbor.example.com/proxy-cache",
-			expectedRef: "harbor.example.com/proxy-cache/library/busybox@sha256:c34ce3c1fcc0c7431e1392cc3abd0dfe2192ffea1898d5250f199d3ac8d87",
+			expectedRef: "harbor.example.com/proxy-cache/library/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa",
 		},
 	}
 	for _, testcase := range tests {
