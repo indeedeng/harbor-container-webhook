@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: indeed/harbor-container-webhook
+  repository: cnmcavoy/harbor-container-webhook
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart version.
-  tag: "0.2.0"
+  tag: "v0.2.0"
 
 imagePullSecrets: []
 nameOverride: ""
