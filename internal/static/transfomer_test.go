@@ -13,9 +13,19 @@ func TestStaticTransformer_Ready(t *testing.T) {
 	require.Nil(t, transformer.Ready())
 }
 
+func MockHarborVerifierTrue() (bool, err){
+	return true, nil
+}
+
+func MockHarborVerifierFalse() (bool, err){
+	return false, ""
+}
+
 func TestStaticTransformer_RewriteImage(t *testing.T) {
 	transformer := &staticTransformer{
 		proxyMap: map[string]string{webhook.BareRegistry: "harbor.example.com/dockerhub-proxy"},
+		harborEndpoint string{"harbor.example.com"}
+		HarborVerifier: MockHarborVerifierTrue
 	}
 
 	type testcase struct {
@@ -44,6 +54,32 @@ func TestStaticTransformer_RewriteImage(t *testing.T) {
 			image:       "ubuntu",
 			expected:    "harbor.example.com/dockerhub-proxy/library/ubuntu:latest",
 		},
+	}
+	for _, testcase := range tests {
+		rewritten, err := transformer.RewriteImage(testcase.image)
+		require.NoError(t, err, testcase.description)
+		require.Equal(t, testcase.expected, rewritten, testcase.description)
+	}
+}
+
+func TestStaticTransformer_RewriteImage_HarborDown(t *testing.T) {
+	transformer := &staticTransformer{
+		proxyMap: map[string]string{webhook.BareRegistry: "harbor.example.com/dockerhub-proxy"},
+		harborEndpoint string{"harbor.example.com"}
+		HarborVerifier: MockHarborVerifierFalse
+	}
+
+	type testcase struct {
+		description string
+		image       string
+		expected    string
+	}
+	tests := []testcase{
+		{
+			description: "an image from dockerhub should not be rewritten if harbor is down",
+			image:       "docker.io/library/ubuntu:latest",
+			expected:    "docker.io/library/ubuntu:latest",
+		}
 	}
 	for _, testcase := range tests {
 		rewritten, err := transformer.RewriteImage(testcase.image)
