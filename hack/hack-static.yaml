@@ -5,3 +5,6 @@ enable_leader_election: false
 static:
   registry_caches:
     docker.io: "harbor.example.com/dockerhub-proxy"
+  timeout: 1m
+  skip_tls_verify: false
+  harbor_endpoint: https://harbor.example.com

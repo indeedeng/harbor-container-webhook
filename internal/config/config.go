@@ -60,6 +60,12 @@ type DynamicProxy struct {
 type StaticProxy struct {
 	// RegistryCaches is an map of registries to harbor projects
 	RegistryCaches map[string]string `yaml:"registry_caches"`
+	// Timeout sets the http.Client Timeout for harbor API requests.
+	Timeout time.Duration `yaml:"timeout"`
+	// SkipTLSVerify if set configures the http.Client to not validate the harbor API certificate for requests.
+	SkipTLSVerify bool `yaml:"skip_tls_verify"`
 	// HarborEndpoint is the address to query for harbor projects and discover proxy cache configuration.
 	HarborEndpoint string `yaml:"harbor_endpoint"`
+	// Verify the harbor API is responding to the harbor_endpoint before transforming container images.
+	VerifyHarborAPI bool `yaml:"verify_harbor_api"`
 }

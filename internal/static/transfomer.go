@@ -1,9 +1,11 @@
 package static
 
 import (
+	"crypto/tls"
 	"errors"
 	"net/http"
-	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
@@ -15,12 +17,12 @@ type staticTransformer struct {
 	HarborVerifier func(string) (bool, error)
 }
 
-func VerifyHarborIsRunning(endpoint string) (bool, error) {
-	timeout := time.Second
-	client := http.Client{
-		Timeout: timeout,
-	}
-	res, err := client.Get(endpoint + "/api/version")
+type harborCheck struct {
+	client *http.Client
+}
+
+func (h *harborCheck) verifyHarborIsRunning(endpoint string) (bool, error) {
+	res, err := h.client.Get(endpoint + "/api/version")
 	if res != nil && res.Body != nil {
 		defer res.Body.Close()
 	}
@@ -56,9 +58,19 @@ func (s *staticTransformer) Ready() error {
 var _ webhook.ContainerTransformer = (*staticTransformer)(nil)
 
 func NewTransformer(conf config.StaticProxy) webhook.ContainerTransformer {
+	// TODO: (cnmcavoy) move http client setup to shared logic with the dynamic transformer?
+	client := cleanhttp.DefaultClient()
+	if conf.SkipTLSVerify {
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
+		client.Transport = transport
+	}
+	client.Timeout = conf.Timeout
+	harborCheck := &harborCheck{client: client}
+
 	return &staticTransformer{
 		proxyMap:       conf.RegistryCaches,
 		harborEndpoint: conf.HarborEndpoint,
-		HarborVerifier: VerifyHarborIsRunning,
+		HarborVerifier: harborCheck.verifyHarborIsRunning,
 	}
 }
