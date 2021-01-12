@@ -7,7 +7,7 @@ entries:
     description: Webhook to configure pods with harbor proxy cache projects
     digest: 828a1c3ff67aa45952f42f1d9947b3759bcf37b97e87a55267bae2bfc4926385
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
-    kubeVersion: '>= 1.16.0'
+    kubeVersion: '>= 1.16.0-0'
     maintainers:
     - email: cmcavoy@indeed.com
       name: cnmcavoy
