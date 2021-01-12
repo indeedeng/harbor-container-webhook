@@ -1,12 +1,33 @@
 package static
 
 import (
+	"errors"
+	"net/http"
+	"time"
+
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 )
 
 type staticTransformer struct {
 	proxyMap map[string]string
+	harborEndpoint string
+	HarborVerifier func(string) (bool, error)
+}
+
+func VerifyHarborIsRunning(endpoint string) (bool, error) {
+	timeout := time.Duration(1 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	res, err := client.Get(endpoint + "/api/version")
+	if err != nil {
+		return false, err
+	}
+	if res.StatusCode != 200 {
+		return false, errors.New("Harbor API server did not return 200 status code")
+	}
+	return true, nil
 }
 
 func (s *staticTransformer) RewriteImage(imageRef string) (string, error) {
@@ -15,9 +36,13 @@ func (s *staticTransformer) RewriteImage(imageRef string) (string, error) {
 		return "", err
 	}
 
-	if rewrite, ok := s.proxyMap[registry]; ok {
-		return webhook.ReplaceRegistryInImageRef(imageRef, rewrite)
+	running, err := s.HarborVerifier(s.harborEndpoint) 
+	if running {
+		if rewrite, ok := s.proxyMap[registry]; ok {
+			return webhook.ReplaceRegistryInImageRef(imageRef, rewrite)
+		}
 	}
+	
 	return imageRef, nil
 }
 
@@ -30,5 +55,7 @@ var _ webhook.ContainerTransformer = (*staticTransformer)(nil)
 func NewTransformer(conf config.StaticProxy) webhook.ContainerTransformer {
 	return &staticTransformer{
 		proxyMap: conf.RegistryCaches,
+		harborEndpoint: conf.HarborEndpoint,
+		HarborVerifier: VerifyHarborIsRunning,
 	}
 }

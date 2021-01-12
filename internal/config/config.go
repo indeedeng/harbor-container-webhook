@@ -60,4 +60,6 @@ type DynamicProxy struct {
 type StaticProxy struct {
 	// RegistryCaches is an map of registries to harbor projects
 	RegistryCaches map[string]string `yaml:"registry_caches"`
+	// HarborEndpoint is the address to query for harbor projects and discover proxy cache configuration.
+	HarborEndpoint string `yaml:"harbor_endpoint"`
 }
