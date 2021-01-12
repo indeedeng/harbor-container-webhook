@@ -3,13 +3,18 @@ package static
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/go-cleanhttp"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+var logger = ctrl.Log.WithName("static-transformer")
 
 type staticTransformer struct {
 	proxyMap       map[string]string
@@ -46,9 +51,11 @@ func (s *staticTransformer) RewriteImage(imageRef string) (string, error) {
 		if rewrite, ok := s.proxyMap[registry]; ok {
 			return webhook.ReplaceRegistryInImageRef(imageRef, rewrite)
 		}
+	} else if err != nil {
+		logger.Info(fmt.Sprintf("failed to rewrite container %q due to harbor check err: %s", imageRef, err.Error()))
 	}
 
-	return imageRef, err
+	return imageRef, nil
 }
 
 func (s *staticTransformer) Ready() error {
