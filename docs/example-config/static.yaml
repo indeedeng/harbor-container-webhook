@@ -6,3 +6,4 @@ verbose: false
 static:
   registry_caches:
     docker.io: "harbor.example.com/dockerhub-proxy"
+  harbor_endpoint: https://harbor.example.com
