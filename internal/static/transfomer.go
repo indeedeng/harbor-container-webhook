@@ -67,10 +67,16 @@ func NewTransformer(conf config.StaticProxy) webhook.ContainerTransformer {
 	}
 	client.Timeout = conf.Timeout
 	harborCheck := &harborCheck{client: client}
+	harborVerifier := harborCheck.verifyHarborIsRunning
+	if conf.VerifyHarborAPI {
+		harborVerifier = func(string) (bool, error) {
+			return true, nil
+		}
+	}
 
 	return &staticTransformer{
 		proxyMap:       conf.RegistryCaches,
 		harborEndpoint: conf.HarborEndpoint,
-		HarborVerifier: harborCheck.verifyHarborIsRunning,
+		HarborVerifier: harborVerifier,
 	}
 }
