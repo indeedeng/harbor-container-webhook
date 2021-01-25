@@ -9,3 +9,5 @@ static:
   skip_tls_verify: false
   harbor_endpoint: https://harbor.example.com
   verify_harbor_api: true
+  bypass_image_list:
+  - "^goharbor/.*"

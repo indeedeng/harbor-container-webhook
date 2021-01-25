@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/hashicorp/go-cleanhttp"
 
@@ -20,6 +21,7 @@ type staticTransformer struct {
 	proxyMap       map[string]string
 	harborEndpoint string
 	HarborVerifier func(string) (bool, error)
+	bypassImageList []string
 }
 
 type harborCheck struct {
@@ -41,6 +43,17 @@ func (h *harborCheck) verifyHarborIsRunning(endpoint string) (bool, error) {
 }
 
 func (s *staticTransformer) RewriteImage(imageRef string) (string, error) {
+	for _, element := range s.bypassImageList {
+		r, err := regexp.Compile(element)
+		if err != nil {
+			logger.Info(fmt.Sprintf("failed to compile bypassImageList regex: %s", err.Error()))
+		}
+		if r.MatchString(imageRef) {
+			logger.Info(fmt.Sprintf("bypassing image %s from harbor because of regex: %s", imageRef, element))
+			return imageRef, nil
+		}
+	}
+
 	registry, err := webhook.RegistryFromImageRef(imageRef)
 	if err != nil {
 		return "", err
@@ -85,5 +98,6 @@ func NewTransformer(conf config.StaticProxy) webhook.ContainerTransformer {
 		proxyMap:       conf.RegistryCaches,
 		harborEndpoint: conf.HarborEndpoint,
 		HarborVerifier: harborVerifier,
+		bypassImageList: conf.BypassImageList,
 	}
 }

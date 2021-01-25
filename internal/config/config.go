@@ -68,4 +68,6 @@ type StaticProxy struct {
 	HarborEndpoint string `yaml:"harbor_endpoint"`
 	// Verify the harbor API is responding to the harbor_endpoint before transforming container images.
 	VerifyHarborAPI bool `yaml:"verify_harbor_api"`
+	// Array of regexes of images to bypass
+	BypassImageList []string `yaml:"bypass_image_list",flow`
 }
