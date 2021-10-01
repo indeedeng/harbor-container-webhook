@@ -17,9 +17,6 @@ spec:
         {{- toYaml .Values.podAnnotations | nindent 8 }}
         {{- end }}
         checksum/configmap: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
-        {{- if .Values.harbor.credentials.pass }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-        {{- end }}
       labels:
         {{- include "harbor-container-webhook.selectorLabels" . | nindent 8 }}
         goharbor.io/harbor-container-webhook-disable: "true"
@@ -29,6 +26,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "harbor-container-webhook.serviceAccountName" . }}
+      priorityClassName: {{ .Values.priorityClassName }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -42,11 +40,6 @@ spec:
           env:
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- if .Values.harbor.credentials.pass }}
-          envFrom:
-            - secretRef:
-                name: {{ include "harbor-container-webhook.fullname" . }}
-          {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"

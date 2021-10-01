@@ -24,8 +24,6 @@ type ContainerTransformer interface {
 	// RewriteImage takes a docker image reference and returns the same image reference rewritten for a harbor
 	// proxy cache project endpoint, if one is available, else returns the original image reference.
 	RewriteImage(imageRef string) (string, error)
-	// Ready returns nil if the transformer is ready to do work.
-	Ready() error
 }
 
 // PodContainerProxier mutates init containers and containers to redirect them to the harbor proxy cache if one exists.
@@ -93,7 +91,7 @@ func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([
 	return containersReplacement, updated, nil
 }
 
-// podContainerProxier implements admission.DecoderInjector.
+// PodContainerProxier implements admission.DecoderInjector.
 // A decoder will be automatically injected.
 
 // InjectDecoder injects the decoder.

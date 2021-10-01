@@ -1,9 +1,0 @@
-port: 9443
-cert_dir: ""
-metrics_addr: ":8080"
-health_addr: ":8090"
-verbose: false
-static:
-  registry_caches:
-    docker.io: "harbor.example.com/dockerhub-proxy"
-  harbor_endpoint: https://harbor.example.com

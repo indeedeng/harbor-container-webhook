@@ -23,7 +23,7 @@ set -o nounset
 set -o pipefail
 
 CN_BASE="harbor-container-webhook"
-TMP_DIR="/tmp/hcw-certs"
+TMP_DIR="./hack/certs"
 
 echo "Generating certs for the Harbor container webhook in ${TMP_DIR}."
 mkdir -p ${TMP_DIR}
@@ -53,7 +53,7 @@ if [[ $? -ne 0 ]]; then
 fi
 set -o errexit
 
-# Create a server certiticate
+# Create a server certificate
 openssl genrsa -out ${TMP_DIR}/serverKey.pem 2048
 # Note the CN is the DNS name of the service of the webhook.
 openssl req -new -key ${TMP_DIR}/serverKey.pem -out ${TMP_DIR}/server.csr -subj "/CN=hcw-webhook.kube-system.svc" -config ${TMP_DIR}/server.conf -addext "subjectAltName = DNS:hcw-webhook.kube-system.svc"

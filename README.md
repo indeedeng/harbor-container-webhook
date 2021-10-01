@@ -7,52 +7,62 @@ harbor-container-webhook is a kubernetes mutating webhook which rewrites contain
 This is typically useful for mirroring public registries that have low rate limits, such as dockerhub, or limiting
 public bandwidth usage, by mirroring images in a local Harbor registry. 
 
-harbor-container webhook inspects pod requests in a kubernetes cluster and rewrites the container image registry of
-matching images with a known proxy cache to the Harbor proxy cache location. This is achieved either thru dynamic
-discovery of available proxies or static manual configuration. Both modes of running the webhook have pros & cons.
+harbor-container-webhook inspects pod requests in a kubernetes cluster and rewrites the container image registry of
+matching images. 
 
-# Modes
+# Configuration
 
-## Static Proxy Caching
-The static proxy caching mode uses configuration to tell the webhook what proxy caches exist, and what docker
-registries they exist for. For example, if you had created a project in Harbor named "dockerhub-cache", and configured
-the proxy cache for this project, then you could configure the static configuration as such:
+The harbor-container-webhook rewrites are managed by configuration rules. Each rule contains a list of regular
+expressions to match on, as well as an optional list of regular expressions to exclude. For each container image
+reference which matches at least one match rule and none of the exclusion rules, then the registry is replaced
+by the `replace` contents of the rule. If `checkUpstream` is enabled, the webhook will first fetch the manifest
+the rewritten container image reference and verify it exists before rewriting the image.
+
+Example configuration:
+```yaml
+port: 9443
+certDir: "./hack/certs"
+healthAddr: ":8080"
+metricsAddr: ":8081"
+rules:
+  - name: 'docker.io rewrite rule'
+    # image refs must match at least one of the rules, and not match any excludes
+    matches:
+      - '^docker.io'
+    excludes:
+      # for example, exclude ubuntu from harbor's proxy cache
+      - '^docker.io/(library/)?ubuntu:.*$'
+    replace: 'harbor.example.com/dockerhub-proxy'
+    checkUpstream: false
+  - name: 'docker.io ubuntu rewrite rule'
+    # image refs must match at least one of the rules, and not match any excludes
+    matches:
+      - '^docker.io/(library/)?ubuntu:.*$'
+    replace: 'harbor.example.com/ubuntu-proxy'
+    checkUpstream: true # tests if the manifest for the rewritten image exists
 ```
-static:
-  registry_caches:
-    docker.io: "harbor.example.com/dockerhub-cache"
-``` 
+# Local Development
 
-Then the webhook would inspect every container (and init container) image, and if it matches the key, will be rewritten
-to use the specified value in its place.
+`make help` prints out the help info for local development:
 
-The static mode requires no secrets or credentials, and does not involve the webhook communicating with the Harbor API.
+```
+build        build harbor-container-webhook binary
+deps         download go modules
+docker-build build the docker image
+docker-push  push the docker image
+fmt          ensure consistent code style
+hack         build and run the webhook w/hack config
+hack-test    curl the admission and no-op json bodies to the webhook
+help         displays this help message
+lint         run golangci-lint
+lint-install installs golangci-lint to the go bin dir
+test         run go tests
 
-**Limitations:**
-If you rename/delete the proxy cache project in Harbor and do not update the webhook configuration,
-the webhook will misconfigure containers in your cluster, likely resulting in downtime! If this possibility concerns you, 
-see the dynamic proxy caching.
+```
 
-## Dynamic Proxy Caching
-The dynamic proxy caching mode uses the harbor API to query & cache information on all of the projects configured in
-Harbor. The webhook inspects each project for any proxy-cache endpoints, and if discovered, will use the Harbor
-configuration to rewrite container (and init container) images with the Harbor project's proxy cache endpoint. 
+Ensure tests and linters pass with `make lint test`.
 
-The webhook configures a TTL on the information fetched from the Harbor API and caches it. When the TTL has expired,
-the webhook will continue to use the stale project information, but will issue a background request to the Harbor API
-to refresh the cache. This ensures that the stale cache does not block new pods, while periodically refreshing
-project metadata from Harbor. Both the cache TTL and resync interval are configurable and default to one minute.
-
-**Limitations**:
-Due to limitations in the Harbor robot account system, the dynamic proxy caching currently requires Harbor admin
-credentials to query the API. These can be set via environment variables, `HARBOR_USER` and `HARBOR_PASS`.
-
-If using the Harbor admin credentials is not appealing to you, see the static proxy caching mode.
-
-# Example Configuration:
-Example configuration for both modes of the webhook exist in docs/example-config:
-* [static configuration](docs/example-config/static.yaml)
-* [dynamic configuration](docs/example-config/dynamic.yaml)
+The webhook can be run locally with `make hack` and then `make hack-test` to submit sample responses to the webhook.
 
 # Deployment
 

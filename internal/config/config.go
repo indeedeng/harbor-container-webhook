@@ -2,7 +2,6 @@ package config
 
 import (
 	"io/ioutil"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -27,45 +26,30 @@ type Configuration struct {
 	// If not set, webhook server would look up the server key and certificate in
 	// {TempDir}/k8s-webhook-server/serving-certs. The server key and certificate
 	// must be named tls.key and tls.crt, respectively.
-	CertDir string `yaml:"cert_dir"`
+	CertDir string `yaml:"certDir"`
 	// MetricsAddr is the address the metric endpoint binds to.
-	MetricsAddr string `yaml:"metrics_addr"`
+	MetricsAddr string `yaml:"metricsAddr"`
 	// HealthAddr is the address the readiness and health probes are mounted to.
-	HealthAddr string        `yaml:"health_addr"`
-	Dynamic    *DynamicProxy `yaml:"dynamic"`
-	Static     *StaticProxy  `yaml:"static"`
-	Verbose    bool          `yaml:"verbose"`
+	HealthAddr string `yaml:"healthAddr"`
+	// Rules is the list of directives to use to evaluate pod container images.
+	Rules []ProxyRule `yaml:"rules"`
+	// Verbose enables trace logging.
+	Verbose bool `yaml:"verbose"`
 }
 
-// DynamicProxy queries the Harbor API to discover projects, and find projects in harbor with a proxy cache
-// endpoint configured. For each such project, it inspects pod container images, and rewrites container images for
-// any container to pull from the proxy cache instead. DynamicProxy requires API access and harbor credentials set
-// as HARBOR_USER and HARBOR_PASS in order to query the Harbor API.
-type DynamicProxy struct {
-	// ResyncInterval configures how often projects & proxy cache registry info is refreshed from the harbor API.
-	ResyncInterval time.Duration `yaml:"resync_interval"`
-	// Timeout sets the http.Client Timeout for harbor API requests.
-	Timeout time.Duration `yaml:"timeout"`
-	// SkipTLSVerify if set configures the http.Client to not validate the harbor API certificate for requests.
-	SkipTLSVerify bool `yaml:"skip_tls_verify"`
-	// HarborEndpoint is the address to query for harbor projects and discover proxy cache configuration.
-	HarborEndpoint string `yaml:"harbor_endpoint"`
-}
-
-// StaticProxy configures a static transformer for pods and rewrites container image in a sed-like fashion.
-// For every pod, it inspects container images, and rewrites the container images according to the supplied
-// configuration below. The advantage of the static proxy configuration is that no auth or API access to harbor
-// is necessary. However, if the harbor project is renamed or deleted for the proxy cache, the static proxy could
-// damage the cluster by configuring containers incorrectly.
-type StaticProxy struct {
-	// RegistryCaches is an map of registries to harbor projects
-	RegistryCaches map[string]string `yaml:"registry_caches"`
-	// Timeout sets the http.Client Timeout for harbor API requests.
-	Timeout time.Duration `yaml:"timeout"`
-	// SkipTLSVerify if set configures the http.Client to not validate the harbor API certificate for requests.
-	SkipTLSVerify bool `yaml:"skip_tls_verify"`
-	// HarborEndpoint is the address to query for harbor projects and discover proxy cache configuration.
-	HarborEndpoint string `yaml:"harbor_endpoint"`
-	// Verify the harbor API is responding to the harbor_endpoint before transforming container images.
-	VerifyHarborAPI bool `yaml:"verify_harbor_api"`
+// ProxyRule contains a list of regex rules used to match against images. Image references that match and are not
+// excluded have their registry rewritten with the replacement string.
+type ProxyRule struct {
+	// Name of the ProxyRule.
+	Name string `yaml:"name"`
+	// Matches is a list of regular expressions that match a registry in an image, e.g '^docker.io'.
+	Matches []string `yaml:"matches"`
+	// Excludes is a list of regular expressions whose images that match should be excluded from this rule.
+	Excludes []string `yaml:"excludes"`
+	// Replace is the string used to rewrite the registry in matching rules.
+	Replace string `yaml:"replace"`
+	// CheckUpstream enables an additional check to ensure the image manifest exists before rewriting.
+	// If the webhook lacks permissions to fetch the image manifest or the registry is down, the image
+	// will not be rewritten. Experimental.
+	CheckUpstream bool `yaml:"checkUpstream"`
 }

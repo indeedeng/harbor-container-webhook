@@ -9,20 +9,13 @@ data:
   webhook-config.yaml: |
     port: {{ .Values.service.port }}
     {{- if .Values.certManager.enabled }}
-    cert_dir: "/etc/hcw/certs"
+    certDir: "/etc/hcw/certs"
     {{- else }}
-    cert_dir: "{{ .Values.certDir }}"
+    certDir: "{{ .Values.certDir }}"
     {{- end }}
-    metrics_addr: ":{{ .Values.prometheus.port }}"
-    health_addr: ":{{ .Values.healthPort }}"
+    metricsAddr: ":{{ .Values.prometheus.port }}"
+    healthAddr: ":{{ .Values.healthPort }}"
     verbose: {{ .Values.verbose }}
-    {{- if eq .Values.mode "dynamic" }}
-    dynamic:
-      resync_interval: {{ .Values.harbor.resyncInterval }}
-      timeout: {{ .Values.harbor.timeout }}
-      skip_tls_verify: {{ .Values.harbor.skipTLSVerify }}
-      harbor_endpoint: {{ .Values.harbor.endpoint }}
-    {{- else if eq .Values.mode "static" }}
-    static:
-    {{- .Values.static | toYaml | nindent 6 }}
-    {{- end }}
+    rules:
+    {{- .Values.rules | toYaml | nindent 6 }}
+    {{- .Values.extraRules | toYaml | nindent 6 }}

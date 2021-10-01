@@ -16,7 +16,7 @@
         "containers": [
           {
             "name": "foo",
-            "image": "busybox:latest"
+            "image": "ubuntu:latest"
           }
         ]
       }

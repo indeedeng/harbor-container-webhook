@@ -27,7 +27,7 @@ lint/check:
 lint-install: ## installs golangci-lint to the go bin dir
 	@if ! golangci-lint --version > /dev/null 2>&1; then \
 		echo "Installing golangci-lint"; \
-		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(BIN_DIR) v1.31.0; \
+		curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(BIN_DIR) v1.42.1; \
 	fi
 
 .PHONY: lint
@@ -55,6 +55,18 @@ docker-build: test ## build the docker image
 
 docker-push: ## push the docker image
 	docker push ${IMG}
+
+hack/certs/tls.crt hack/certs/tls.key:
+	hack/gencerts.sh
+
+.PHONY: hack
+hack: build hack/certs/tls.crt hack/certs/tls.key ## build and run the webhook w/hack config
+	bin/harbor-container-webhook --config hack/config.yaml
+
+.PHONY: hack-test
+hack-test: ## curl the admission and no-op json bodies to the webhook
+	curl -X POST 'https://localhost:9443/webhook-v1-pod' --data-binary @hack/test/admission.json -H "Content-Type: application/json" --cert hack/certs/tls.crt --key hack/certs/tls.key --cacert hack/certs/caCert.pem
+	curl -X POST 'https://localhost:9443/webhook-v1-pod' --data-binary @hack/test/no-op.json -H "Content-Type: application/json" --cert hack/certs/tls.crt --key hack/certs/tls.key --cacert hack/certs/caCert.pem
 
 .PHONY: all
 all: test gen build

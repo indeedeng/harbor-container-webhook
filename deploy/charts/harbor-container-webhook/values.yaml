@@ -8,7 +8,7 @@ image:
   repository: cnmcavoy/harbor-container-webhook
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart version.
-  tag: "v0.2.0"
+  tag: "v0.3.0"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -50,9 +50,11 @@ affinity: {}
 extraArgs: []
 extraEnv: []
 
+priorityClassName: ""
+
 certManager:
   enabled: true
-  apiVersion: "cert-manager.io/v1alpha2"
+  apiVersion: "cert-manager.io/v1"
 
 webhook:
   namespaceSelector:
@@ -67,18 +69,25 @@ webhook:
         values: ["true"]
   failurePolicy: Ignore
 
-## configures the webhook mode (dynamic or static).
-## dynamic mode queries the Harbor API to discover projects, and find projects in harbor with a proxy cache.
-## static mode configures a static transformer for pods and rewrites container image in a sed-like fashion.
-mode: dynamic
-harbor:
-  endpoint: "" # (e.g https://harbor.example.com)
-  skipTLSVerify: false
-  timeout: 1m
-  resyncInterval: 1m
-  credentials:
-    user: "" # must be 'admin' (see: https://github.com/goharbor/harbor/issues/11286)
-    pass: "" # must be admin password
+## configures the webhook rules, which are evaluated for each image in a pod
+rules: []
+#  - name: 'docker.io rewrite rule'
+#    # image refs must match at least one of the rules, and not match any excludes
+#    matches:
+#      - '^docker.io'
+#    excludes:
+#      # for example, exclude ubuntu from harbor's proxy cache
+#      - '^docker.io/(library/)?ubuntu:.*$'
+#    replace: 'harbor.example.com/dockerhub-proxy'
+#    checkUpstream: false
+#  - name: 'docker.io ubuntu rewrite rule'
+#    # image refs must match at least one of the rules, and not match any excludes
+#    matches:
+#      - '^docker.io/(library/)?ubuntu:.*$'
+#    replace: 'harbor.example.com/ubuntu-proxy'
+#    checkUpstream: true # tests if the manifest for the rewritten image exists
+
+extraRules: []
 
 certDir: ""
 prometheus:
@@ -86,16 +95,3 @@ prometheus:
   port: 8080
 healthPort: 8090
 verbose: false
-
-dynamic:
-  resync_interval: 1m
-  timeout: 1m
-  skip_tls_verify: false
-  harbor_endpoint: https://harbor.example.com
-static:
-  registry_caches: {}
-#    docker.io: "harbor.example.com/dockerhub-proxy"
-  timeout: 1m
-  skip_tls_verify: false
-  harbor_endpoint: https://harbor.example.com
-  verify_harbor_api: true

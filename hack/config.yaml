@@ -1,0 +1,20 @@
+port: 9443
+certDir: "./hack/certs"
+healthAddr: ":8080"
+metricsAddr: ":8081"
+rules:
+  - name: 'docker.io rewrite rule'
+    # image refs must match at least one of the rules, and not match any excludes
+    matches:
+      - '^docker.io'
+    excludes:
+      # for example, exclude ubuntu from harbor's proxy cache
+      - '^docker.io/(library/)?ubuntu:.*$'
+    replace: 'harbor.example.com/dockerhub-proxy'
+    checkUpstream: false
+  - name: 'docker.io ubuntu rewrite rule'
+    # image refs must match at least one of the rules, and not match any excludes
+    matches:
+      - '^docker.io/(library/)?ubuntu:.*$'
+    replace: 'harbor.example.com/ubuntu-proxy'
+    checkUpstream: true # tests if the manifest for the rewritten image exists

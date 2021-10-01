@@ -1,18 +1,10 @@
-/*
-Copyright 2020 Indeed.
-*/
-
 package main
 
 import (
-	"errors"
 	"flag"
-	"net/http"
 	"os"
 
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/dynamic"
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/static"
 	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -45,6 +37,8 @@ func init() {
 
 func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	opts := zap.Options{}
+	opts.BindFlags(flag.CommandLine)
 
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "path to the config for the harbor-container-webhook")
@@ -68,16 +62,11 @@ func main() {
 		setupLog.Error(err, "unable to start harbor-container-webhook")
 		os.Exit(1)
 	}
-
 	// +kubebuilder:scaffold:builder
 
-	var transformer webhook.ContainerTransformer
-	if conf.Dynamic != nil {
-		transformer = dynamic.NewTransformer(*conf.Dynamic)
-	} else if conf.Static != nil {
-		transformer = static.NewTransformer(*conf.Static)
-	} else {
-		setupLog.Error(errors.New("no static or dynamic config blocks supplied"), "unable to start harbor-container-webhook")
+	transformer, err := webhook.NewMultiTransformer(conf.Rules)
+	if err != nil {
+		setupLog.Error(err, "unable to start harbor-container-webhook")
 		os.Exit(1)
 	}
 
@@ -85,9 +74,7 @@ func main() {
 		setupLog.Error(err, "Unable add a liveness check to harbor-container-webhook")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("ready-ping", func(_ *http.Request) error {
-		return transformer.Ready()
-	}); err != nil {
+	if err := mgr.AddReadyzCheck("ready-ping", healthz.Ping); err != nil {
 		setupLog.Error(err, "Unable add a readiness check to harbor-container-webhook")
 		os.Exit(1)
 	}
