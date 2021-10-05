@@ -3,7 +3,22 @@ entries:
   harbor-container-webhook:
   - apiVersion: v2
     appVersion: 0.3.0
-    created: "2021-10-04T14:00:23.087786398-05:00"
+    created: "2021-10-05T16:10:59.145687711-05:00"
+    description: Webhook to configure pods with harbor proxy cache projects
+    digest: 04486a5c41d5606e6c634a07d5669f5f99d7d3f78706808babaeb9b86773cf7f
+    home: https://github.com/IndeedEng-alpha/harbor-container-webhook
+    kubeVersion: '>= 1.16.0-0'
+    maintainers:
+    - email: cmcavoy@indeed.com
+      name: cnmcavoy
+    name: harbor-container-webhook
+    type: application
+    urls:
+    - harbor-container-webhook-0.3.2.tgz
+    version: 0.3.2
+  - apiVersion: v2
+    appVersion: 0.3.0
+    created: "2021-10-05T16:10:59.145271752-05:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: ed5a63e20bf6784cf32081b295fe04aefe7119f14e0c7cf787f0736d323e77a8
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -14,21 +29,21 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - https://indeedeng-alpha.github.io/harbor-container-webhook/harbor-container-webhook-0.3.1.tgz
+    - harbor-container-webhook-0.3.1.tgz
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.2.0
-    created: "2020-12-18T14:49:23.087786398-05:00"
+    created: "2021-10-05T16:10:59.14481559-05:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: 828a1c3ff67aa45952f42f1d9947b3759bcf37b97e87a55267bae2bfc4926385
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
-    kubeVersion: '>= 1.16.0-0'
+    kubeVersion: '>= 1.16.0'
     maintainers:
     - email: cmcavoy@indeed.com
       name: cnmcavoy
     name: harbor-container-webhook
     type: application
     urls:
-    - https://indeedeng-alpha.github.io/harbor-container-webhook/harbor-container-webhook-0.2.0.tgz
+    - harbor-container-webhook-0.2.0.tgz
     version: 0.2.0
-generated: "2020-12-18T14:49:23.086739006-05:00"
+generated: "2021-10-05T16:10:59.144230652-05:00"
