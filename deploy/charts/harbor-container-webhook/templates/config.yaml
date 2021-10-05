@@ -17,5 +17,4 @@ data:
     healthAddr: ":{{ .Values.healthPort }}"
     verbose: {{ .Values.verbose }}
     rules:
-    {{- .Values.rules | toYaml | nindent 6 }}
-    {{- .Values.extraRules | toYaml | nindent 6 }}
+    {{- concat (default list .Values.rules) (default list .Values.extraRules) | toYaml | nindent 6 }}
