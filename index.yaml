@@ -15,7 +15,7 @@ entries:
     type: application
     urls:
     - https://indeedeng-alpha.github.io/harbor-container-webhook/harbor-container-webhook-0.3.1.tgz
-    version: 0.2.0
+    version: 0.3.1
   - apiVersion: v2
     appVersion: 0.2.0
     created: "2020-12-18T14:49:23.087786398-05:00"
