@@ -6,18 +6,34 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"gomodules.xyz/jsonpatch/v2"
 
 	corev1 "k8s.io/api/core/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/webhook-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
 
-var logger = ctrl.Log.WithName("mutator")
+var (
+	logger = ctrl.Log.WithName("mutator")
+
+	imageMutation = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "hcw",
+		Subsystem: "mutations",
+		Name:      "image_rewrite",
+		Help:      "image rewrite mutation",
+	}, []string{"container_name", "kind", "original_image", "rewritten_image"})
+)
+
+func init() {
+	metrics.Registry.MustRegister(imageMutation)
+}
 
 // ContainerTransformer rewrites docker image references for harbor proxy cache projects.
 type ContainerTransformer interface {
@@ -43,11 +59,11 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	initContainers, updatedInit, err := p.updateContainers(pod.Spec.InitContainers)
+	initContainers, updatedInit, err := p.updateContainers(pod.Spec.InitContainers, "init")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	containers, updated, err := p.updateContainers(pod.Spec.Containers)
+	containers, updated, err := p.updateContainers(pod.Spec.Containers, "normal")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -70,7 +86,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([]corev1.Container, bool, error) {
+func (p *PodContainerProxier) updateContainers(containers []corev1.Container, kind string) ([]corev1.Container, bool, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
 	updated := false
 	for i := range containers {
@@ -84,6 +100,7 @@ func (p *PodContainerProxier) updateContainers(containers []corev1.Container) ([
 		}
 		if imageRef != container.Image {
 			logger.Info(fmt.Sprintf("rewriting the image of %q from %q to %q", container.Name, container.Image, imageRef))
+			imageMutation.WithLabelValues(container.Name, kind, container.Image, imageRef).Inc()
 		}
 		container.Image = imageRef
 		containersReplacement = append(containersReplacement, container)
