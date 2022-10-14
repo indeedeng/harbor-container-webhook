@@ -67,6 +67,9 @@ spec:
               name: certs
               readOnly: true
             {{- end }}
+            {{- with .Values.additionalVolumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         - name: config
           configMap:
@@ -75,6 +78,9 @@ spec:
         - name: certs
           secret:
             secretName: {{ include "harbor-container-webhook.fullname" . }}-certs
+        {{- end }}
+        {{- with .Values.additionalVolumes }}
+          {{- toYaml . | nindent 8 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
