@@ -5,10 +5,10 @@
 
 harbor-container-webhook is a kubernetes mutating webhook which rewrites container images to use a Harbor proxy cache.
 This is typically useful for mirroring public registries that have low rate limits, such as dockerhub, or limiting
-public bandwidth usage, by mirroring images in a local Harbor registry. 
+public bandwidth usage, by mirroring images in a local Harbor registry.
 
 harbor-container-webhook inspects pod requests in a kubernetes cluster and rewrites the container image registry of
-matching images. 
+matching images.
 
 # Configuration
 
@@ -55,7 +55,6 @@ hack         build and run the webhook w/hack config
 hack-test    curl the admission and no-op json bodies to the webhook
 help         displays this help message
 lint         run golangci-lint
-lint-install installs golangci-lint to the go bin dir
 test         run go tests
 
 ```

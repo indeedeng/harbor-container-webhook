@@ -35,8 +35,6 @@ linters-settings:
     check-shadowing: false
   lll:
     line-length: 300
-  maligned:
-    suggest-new: true
   misspell:
     locale: US
 
@@ -44,24 +42,27 @@ issues:
   exclude-rules:
     # Disable linters that are annoying in tests.
     - path: _test\.go
-      linters: [bodyclose, gocritic, gosec, staticcheck]
+      linters: [bodyclose, gocritic, gosec, staticcheck, stylecheck]
 
 linters:
   disable-all: true
   enable:
+    - asasalint
     - asciicheck
+    - bidichk
     - bodyclose
-    - deadcode
+    - contextcheck
     - depguard
     - dogsled
     - dupl
+    - durationcheck
     - errcheck
+    - execinquery
     - exhaustive
     - exportloopref
     - gocritic
     - godot
     - gofmt
-    - golint
     - gosec
     - gosimple
     - govet
@@ -70,13 +71,10 @@ linters:
     - misspell
     - nolintlint
     - prealloc
-    - rowserrcheck
-    - sqlclosecheck
+    - revive
     - staticcheck
-    - structcheck
     - stylecheck
+    - tenv
     - typecheck
     - unconvert
     - unparam
-    - unused
-    - varcheck
