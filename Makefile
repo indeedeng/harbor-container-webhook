@@ -4,7 +4,7 @@ SHELL := bash
 .DEFAULT_GOAL := all
 
 RUN_GO_GROUPS := go run oss.indeed.com/go/go-groups@v1.1.3
-RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.1
 
 .PHONY: deps
 deps: ## download go modules

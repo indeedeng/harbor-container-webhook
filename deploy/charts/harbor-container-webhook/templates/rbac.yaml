@@ -1,0 +1,24 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "harbor-container-webhook.fullname" . }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "harbor-container-webhook.fullname" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "harbor-container-webhook.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "harbor-container-webhook.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+---

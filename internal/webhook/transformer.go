@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -70,15 +71,15 @@ func NewMultiTransformer(rules []config.ProxyRule) (ContainerTransformer, error)
 	return &multiTransformer{transformers: transformers}, nil
 }
 
-func (t *multiTransformer) RewriteImage(imageRef string) (string, error) {
+func (t *multiTransformer) RewriteImage(imageRef, platform, os string) (string, error) {
 	for _, transformer := range t.transformers {
-		updatedRef, err := transformer.RewriteImage(imageRef)
+		updatedRef, err := transformer.RewriteImage(imageRef, platform, os)
 		if err != nil {
 			return "", fmt.Errorf("transformer %q failed to update imageRef %q: %w", transformer.rule.Name, imageRef, err)
 		}
 		if updatedRef != imageRef {
 			if transformer.rule.CheckUpstream {
-				if err := transformer.checkUpstream(updatedRef); err != nil {
+				if err := transformer.checkUpstream(updatedRef, &v1.Platform{Architecture: platform, OS: os}); err != nil {
 					logger.Info(fmt.Sprintf("skipping rewriting %q to %q, could not fetch image manifest: %s", imageRef, updatedRef, err.Error()))
 					continue
 				}
@@ -124,8 +125,8 @@ func newRuleTransformer(rule config.ProxyRule) (*ruleTransformer, error) {
 	return transformer, nil
 }
 
-func (t *ruleTransformer) checkUpstream(imageRef string) error {
-	if _, err := crane.Manifest(imageRef); err != nil {
+func (t *ruleTransformer) checkUpstream(imageRef string, platform *v1.Platform) error {
+	if _, err := crane.Manifest(imageRef, crane.WithPlatform(platform)); err != nil {
 		upstreamErrors.WithLabelValues(t.metricName).Inc()
 		return err
 	}
@@ -133,7 +134,7 @@ func (t *ruleTransformer) checkUpstream(imageRef string) error {
 	return nil
 }
 
-func (t *ruleTransformer) RewriteImage(imageRef string) (string, error) {
+func (t *ruleTransformer) RewriteImage(imageRef, _, _ string) (string, error) {
 	start := time.Now()
 	updatedRef, err := t.rewriteImage(imageRef)
 	duration := time.Since(start)
