@@ -3,6 +3,10 @@ SHELL := bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := all
 
+IMG ?= cnmcavoy/harbor-container-webhook
+TAG ?= dev
+ARCH ?= $(shell go env GOARCH)
+
 RUN_GO_GROUPS := go run oss.indeed.com/go/go-groups@v1.1.3
 RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.1
 
@@ -36,11 +40,17 @@ gen:
 build: ## build harbor-container-webhook binary
 	go build -o bin/harbor-container-webhook main.go
 
+.PHONY: docker-build
 docker-build: test ## build the docker image
-	docker build . -t ${IMG}
+	docker buildx rm harbor-container-webhook-builder || true
+	docker buildx create --name harbor-container-webhook-builder --driver-opt network=host
+	docker buildx build --builder=harbor-container-webhook-builder --platform=linux/amd64,linux/arm64 -t $(IMG):$(TAG) .
 
+.PHONY: docker-push
 docker-push: ## push the docker image
-	docker push ${IMG}
+	docker buildx rm harbor-container-webhook-builder || true
+	docker buildx create --name harbor-container-webhook-builder --driver-opt network=host
+	docker buildx build --builder=harbor-container-webhook-builder --platform=linux/amd64,linux/arm64 --push -t $(IMG):$(TAG) .
 
 hack/certs/tls.crt hack/certs/tls.key:
 	hack/gencerts.sh
