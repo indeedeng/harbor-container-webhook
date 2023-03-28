@@ -67,6 +67,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if nodeName != "" {
 		platformArch, os, err = lookupNodeArchAndOS(ctx, nodeName)
 		if err != nil {
+			logger.Error(err, fmt.Sprintf("rejected patching pod %s, failed to lookup node arch or os", string(pod.UID)))
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 	}
@@ -107,8 +108,8 @@ func lookupNodeArchAndOS(ctx context.Context, nodeName string) (platform, os str
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create rest client: %w", err)
 	}
-	var node *corev1.Node
-	if err = restClient.Get(ctx, client.ObjectKey{Name: nodeName}, node); err != nil {
+	node := corev1.Node{}
+	if err = restClient.Get(ctx, client.ObjectKey{Name: nodeName}, &node); err != nil {
 		return "", "", fmt.Errorf("failed to lookup node %s: %w", nodeName, err)
 	}
 	return node.Status.NodeInfo.Architecture, node.Status.NodeInfo.OperatingSystem, nil
