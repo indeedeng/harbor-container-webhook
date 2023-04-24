@@ -3,9 +3,9 @@ package webhook
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/indeedeng-alpha/harbor-container-webhook/internal/config"
 
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiTransformer_RewriteImage(t *testing.T) {

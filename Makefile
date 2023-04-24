@@ -8,7 +8,7 @@ TAG ?= dev
 ARCH ?= $(shell go env GOARCH)
 
 RUN_GO_GROUPS := go run oss.indeed.com/go/go-groups@v1.1.3
-RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.1
+RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2
 
 .PHONY: deps
 deps: ## download go modules

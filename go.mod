@@ -1,4 +1,4 @@
-module indeed.com/devops-incubation/harbor-container-webhook
+module github.com/indeedeng-alpha/harbor-container-webhook
 
 go 1.19
 

@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/webhook"
+	"github.com/indeedeng-alpha/harbor-container-webhook/internal/config"
+	"github.com/indeedeng-alpha/harbor-container-webhook/internal/webhook"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"

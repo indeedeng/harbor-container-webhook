@@ -9,9 +9,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/indeedeng-alpha/harbor-container-webhook/internal/config"
 
-	"indeed.com/devops-incubation/harbor-container-webhook/internal/config"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
