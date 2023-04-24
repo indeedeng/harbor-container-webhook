@@ -67,8 +67,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if nodeName != "" {
 		platformArch, os, err = lookupNodeArchAndOS(ctx, nodeName)
 		if err != nil {
-			logger.Error(err, fmt.Sprintf("rejected patching pod %s, failed to lookup node arch or os", string(pod.UID)))
-			return admission.Errored(http.StatusBadRequest, err)
+			logger.Info(fmt.Sprintf("unable to lookup node for pod %q, defaulting pod to webhook runtime OS and architecture: %s", string(pod.UID), err.Error()))
 		}
 	}
 
