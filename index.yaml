@@ -2,6 +2,21 @@ apiVersion: v1
 entries:
   harbor-container-webhook:
   - apiVersion: v2
+    appVersion: 0.5.0
+    created: "2023-05-12T12:14:08.826946853-05:00"
+    description: Webhook to configure pods with harbor proxy cache projects
+    digest: 378cdc651acc33d4ee42231ad521888f5c62456a7c6ab37abd8ae114f8cd9e14
+    home: https://github.com/IndeedEng-alpha/harbor-container-webhook
+    kubeVersion: '>= 1.16.0-0'
+    maintainers:
+    - email: cmcavoy@indeed.com
+      name: cnmcavoy
+    name: harbor-container-webhook
+    type: application
+    urls:
+    - harbor-container-webhook-0.5.0.tgz
+    version: 0.5.0
+  - apiVersion: v2
     appVersion: 0.4.1
     created: "2023-03-28T12:28:13.940540489-05:00"
     description: Webhook to configure pods with harbor proxy cache projects
