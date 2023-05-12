@@ -57,7 +57,7 @@ hack/certs/tls.crt hack/certs/tls.key:
 
 .PHONY: hack
 hack: build hack/certs/tls.crt hack/certs/tls.key ## build and run the webhook w/hack config
-	bin/harbor-container-webhook --config hack/config.yaml
+	bin/harbor-container-webhook --config hack/config.yaml --kube-client-qps=5 --kube-client-burst=10 --kube-client-lazy-remap
 
 .PHONY: hack-test
 hack-test: ## curl the admission and no-op json bodies to the webhook

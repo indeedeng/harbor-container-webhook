@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/indeedeng-alpha/harbor-container-webhook/internal/config"
@@ -14,6 +15,7 @@ import (
 
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -41,7 +43,13 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 
 	var configPath string
+	var kubeClientBurst int
+	var kubeClientQPS float64
+	var kubeClientlazyRemap bool
 	flag.StringVar(&configPath, "config", "", "path to the config for the harbor-container-webhook")
+	flag.IntVar(&kubeClientBurst, "kube-client-burst", rest.DefaultBurst, "Burst value for kubernetes client.")
+	flag.Float64Var(&kubeClientQPS, "kube-client-qps", float64(rest.DefaultQPS), "QPS value for kubernetes client.")
+	flag.BoolVar(&kubeClientlazyRemap, "kube-client-lazy-remap", false, "Enables experimental lazy rest mapper. May make fewer unnecessary API calls to discover resources.")
 	flag.Parse()
 
 	conf, err := config.LoadConfiguration(configPath)
@@ -85,7 +93,12 @@ func main() {
 		Decoder:     decoder,
 		Transformer: transformer,
 		Verbose:     conf.Verbose,
+
+		KubeClientQPS:       float32(kubeClientQPS),
+		KubeClientBurst:     kubeClientBurst,
+		KubeClientlazyRemap: kubeClientlazyRemap,
 	}
+	setupLog.Info(fmt.Sprintf("kube client configured for %f.2 QPS, %d Burst (LazyRemap: %v)", float32(kubeClientQPS), kubeClientBurst, kubeClientlazyRemap))
 
 	mgr.GetWebhookServer().Register("/webhook-v1-pod", &ctrlwebhook.Admission{Handler: &mutate})
 

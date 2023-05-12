@@ -13,8 +13,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -50,6 +53,11 @@ type PodContainerProxier struct {
 	Decoder     *admission.Decoder
 	Transformer ContainerTransformer
 	Verbose     bool
+
+	// kube config settings
+	KubeClientBurst     int
+	KubeClientQPS       float32
+	KubeClientlazyRemap bool
 }
 
 // Handle mutates init containers and containers.
@@ -65,7 +73,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	os := runtime.GOOS
 	nodeName := pod.Spec.NodeName
 	if nodeName != "" {
-		platformArch, os, err = lookupNodeArchAndOS(ctx, nodeName)
+		platformArch, os, err = p.lookupNodeArchAndOS(ctx, nodeName)
 		if err != nil {
 			logger.Info(fmt.Sprintf("unable to lookup node for pod %q, defaulting pod to webhook runtime OS and architecture: %s", string(pod.UID), err.Error()))
 		}
@@ -98,12 +106,22 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-func lookupNodeArchAndOS(ctx context.Context, nodeName string) (platform, os string, err error) {
+func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, nodeName string) (platform, os string, err error) {
 	restCfg, err := config.GetConfig()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create rest config: %w", err)
 	}
-	restClient, err := client.New(restCfg, client.Options{})
+	restCfg.QPS = p.KubeClientQPS
+	restCfg.Burst = p.KubeClientBurst
+
+	var mapper meta.RESTMapper
+	if p.KubeClientlazyRemap {
+		mapper, err = apiutil.NewDynamicRESTMapper(restCfg, apiutil.WithExperimentalLazyMapper)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to create rest client mapper: %w", err)
+		}
+	}
+	restClient, err := client.New(restCfg, client.Options{Mapper: mapper})
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create rest client: %w", err)
 	}
