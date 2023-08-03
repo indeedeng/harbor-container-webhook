@@ -16,13 +16,13 @@ RUN  --mount=type=cache,target=/root/.local/share/golang \
 # Copy the go source
 COPY ./ ./
 
-ARG ARCH
+ARG TARGETARCH
 
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.local/share/golang \
-    CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -a -o harbor-container-webhook main.go
+    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -a -o harbor-container-webhook main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
