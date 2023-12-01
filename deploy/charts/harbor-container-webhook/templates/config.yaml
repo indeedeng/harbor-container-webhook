@@ -13,7 +13,11 @@ data:
     {{- else }}
     certDir: "{{ .Values.certDir }}"
     {{- end }}
+    {{- if .Values.prometheus.enabled }}
     metricsAddr: ":{{ .Values.prometheus.port }}"
+    {{- else }}
+    metricsAddr: "0"
+    {{- end }}
     healthAddr: ":{{ .Values.healthPort }}"
     verbose: {{ .Values.verbose }}
     rules:
