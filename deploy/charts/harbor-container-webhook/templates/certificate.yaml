@@ -8,8 +8,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   secretName: {{ include "harbor-container-webhook.fullname" . }}-certs
-  duration: 2160h0m0s
-  renewBefore: 360h0m0s
+  duration: {{ .Values.certManager.duration }}
+  renewBefore: {{ .Values.certManager.renewBefore }}
   commonName: {{ include "harbor-container-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
   dnsNames:
     - {{ include "harbor-container-webhook.fullname" . }}
