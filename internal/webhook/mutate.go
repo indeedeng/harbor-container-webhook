@@ -13,11 +13,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -55,9 +52,8 @@ type PodContainerProxier struct {
 	Verbose     bool
 
 	// kube config settings
-	KubeClientBurst     int
-	KubeClientQPS       float32
-	KubeClientlazyRemap bool
+	KubeClientBurst int
+	KubeClientQPS   float32
 }
 
 // Handle mutates init containers and containers.
@@ -114,14 +110,7 @@ func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, nodeName 
 	restCfg.QPS = p.KubeClientQPS
 	restCfg.Burst = p.KubeClientBurst
 
-	var mapper meta.RESTMapper
-	if p.KubeClientlazyRemap {
-		mapper, err = apiutil.NewDynamicRESTMapper(restCfg, apiutil.WithExperimentalLazyMapper)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to create rest client mapper: %w", err)
-		}
-	}
-	restClient, err := client.New(restCfg, client.Options{Mapper: mapper})
+	restClient, err := client.New(restCfg, client.Options{})
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create rest client: %w", err)
 	}

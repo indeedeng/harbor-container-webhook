@@ -20,7 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	// +kubebuilder:scaffold:imports
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -49,7 +49,7 @@ func main() {
 	flag.StringVar(&configPath, "config", "", "path to the config for the harbor-container-webhook")
 	flag.IntVar(&kubeClientBurst, "kube-client-burst", rest.DefaultBurst, "Burst value for kubernetes client.")
 	flag.Float64Var(&kubeClientQPS, "kube-client-qps", float64(rest.DefaultQPS), "QPS value for kubernetes client.")
-	flag.BoolVar(&kubeClientlazyRemap, "kube-client-lazy-remap", false, "Enables experimental lazy rest mapper. May make fewer unnecessary API calls to discover resources.")
+	flag.BoolVar(&kubeClientlazyRemap, "kube-client-lazy-remap", false, "Deprecated. Has no effect.")
 	flag.Parse()
 
 	conf, err := config.LoadConfiguration(configPath)
@@ -59,18 +59,21 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     conf.MetricsAddr,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: conf.MetricsAddr,
+		},
+		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
+			Port:    conf.Port,
+			CertDir: conf.CertDir,
+		}),
 		HealthProbeBindAddress: conf.HealthAddr,
-		Port:                   conf.Port,
 		LeaderElection:         false,
-		CertDir:                conf.CertDir,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start harbor-container-webhook")
 		os.Exit(1)
 	}
-	// +kubebuilder:scaffold:builder
 
 	transformer, err := webhook.NewMultiTransformer(conf.Rules)
 	if err != nil {
@@ -87,18 +90,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	decoder, _ := admission.NewDecoder(scheme)
 	mutate := webhook.PodContainerProxier{
 		Client:      mgr.GetClient(),
-		Decoder:     decoder,
+		Decoder:     admission.NewDecoder(scheme),
 		Transformer: transformer,
 		Verbose:     conf.Verbose,
 
-		KubeClientQPS:       float32(kubeClientQPS),
-		KubeClientBurst:     kubeClientBurst,
-		KubeClientlazyRemap: kubeClientlazyRemap,
+		KubeClientQPS:   float32(kubeClientQPS),
+		KubeClientBurst: kubeClientBurst,
 	}
-	setupLog.Info(fmt.Sprintf("kube client configured for %f.2 QPS, %d Burst (LazyRemap: %v)", float32(kubeClientQPS), kubeClientBurst, kubeClientlazyRemap))
+	setupLog.Info(fmt.Sprintf("kube client configured for %f.2 QPS, %d Burst", float32(kubeClientQPS), kubeClientBurst))
 
 	mgr.GetWebhookServer().Register("/webhook-v1-pod", &ctrlwebhook.Admission{Handler: &mutate})
 
