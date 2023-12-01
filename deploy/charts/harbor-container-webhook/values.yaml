@@ -101,3 +101,15 @@ prometheus:
   port: 8080
 healthPort: 8090
 verbose: false
+
+metrics:
+  serviceMonitor:
+    enabled: false
+    jobLabel: ""
+    interval: ""
+    scrapeTimeout: ""
+    honorLabels: false
+    metricRelabelings: []
+    relabelings: []
+    labels: {}
+    scheme: http
