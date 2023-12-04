@@ -2,8 +2,23 @@ apiVersion: v1
 entries:
   harbor-container-webhook:
   - apiVersion: v2
+    appVersion: 0.6.0
+    created: "2023-12-04T14:18:54.742235976-06:00"
+    description: Webhook to configure pods with harbor proxy cache projects
+    digest: a67d8af527843d71947803ba813b4fbeb047dbcc4342deb09907e352d521e9f7
+    home: https://github.com/IndeedEng-alpha/harbor-container-webhook
+    kubeVersion: '>= 1.16.0-0'
+    maintainers:
+    - email: cmcavoy@indeed.com
+      name: cnmcavoy
+    name: harbor-container-webhook
+    type: application
+    urls:
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v2
     appVersion: 0.5.0
-    created: "2023-05-12T12:14:08.826946853-05:00"
+    created: "2023-12-04T14:18:54.741372026-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: 378cdc651acc33d4ee42231ad521888f5c62456a7c6ab37abd8ae114f8cd9e14
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -14,11 +29,26 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.5.0.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.5.0.tgz
     version: 0.5.0
   - apiVersion: v2
+    appVersion: 0.4.2
+    created: "2023-12-04T14:18:54.740714932-06:00"
+    description: Webhook to configure pods with harbor proxy cache projects
+    digest: 04953956c8f2e0d84aaf0f0b08a89dc1f1bdcc8285ea1bce7983cf9693835fa7
+    home: https://github.com/IndeedEng-alpha/harbor-container-webhook
+    kubeVersion: '>= 1.16.0-0'
+    maintainers:
+    - email: cmcavoy@indeed.com
+      name: cnmcavoy
+    name: harbor-container-webhook
+    type: application
+    urls:
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.4.2.tgz
+    version: 0.4.2
+  - apiVersion: v2
     appVersion: 0.4.1
-    created: "2023-03-28T12:28:13.940540489-05:00"
+    created: "2023-12-04T14:18:54.740044969-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: 6547b605c8f7968f88944947dff2ef21f1e94c8fe91a20dc23116cab5c980fe4
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -29,26 +59,26 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.4.1.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.4.1.tgz
     version: 0.4.1
   - apiVersion: v2
     appVersion: 0.4.0
-    created: "2023-03-23T13:29:23.550822515-05:00"
+    created: "2023-12-04T14:18:54.739349381-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: e916943681e8d846009888b9a3680f96ce317f9670cfa2d4913744508e759552
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
     kubeVersion: '>= 1.16.0-0'
     maintainers:
-      - email: cmcavoy@indeed.com
-        name: cnmcavoy
+    - email: cmcavoy@indeed.com
+      name: cnmcavoy
     name: harbor-container-webhook
     type: application
     urls:
-      - harbor-container-webhook-0.4.0.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.4.0.tgz
     version: 0.4.0
   - apiVersion: v2
     appVersion: 0.3.5
-    created: "2022-10-17T12:15:43.381998861-05:00"
+    created: "2023-12-04T14:18:54.73859385-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: e59923c03e0e1e63f5cd254ebcfdd98bf4346c7518b7be52abe76422828dcb17
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -59,11 +89,11 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.3.5.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.3.5.tgz
     version: 0.3.5
   - apiVersion: v2
     appVersion: 0.3.4
-    created: "2022-10-17T12:15:43.381449757-05:00"
+    created: "2023-12-04T14:18:54.737904124-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: cda9168053bcae4a346718ca1561c17b6d8dee94dceaab5238949ebae290b079
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -74,11 +104,11 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.3.4.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.3.4.tgz
     version: 0.3.4
   - apiVersion: v2
     appVersion: 0.3.0
-    created: "2022-10-17T12:15:43.380780114-05:00"
+    created: "2023-12-04T14:18:54.73726895-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: 04486a5c41d5606e6c634a07d5669f5f99d7d3f78706808babaeb9b86773cf7f
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -89,11 +119,11 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.3.2.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.3.2.tgz
     version: 0.3.2
   - apiVersion: v2
     appVersion: 0.3.0
-    created: "2022-10-17T12:15:43.379564718-05:00"
+    created: "2023-12-04T14:18:54.736622982-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: ed5a63e20bf6784cf32081b295fe04aefe7119f14e0c7cf787f0736d323e77a8
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -104,11 +134,11 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.3.1.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.3.1.tgz
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.2.0
-    created: "2022-10-17T12:15:43.37900565-05:00"
+    created: "2023-12-04T14:18:54.735940492-06:00"
     description: Webhook to configure pods with harbor proxy cache projects
     digest: 828a1c3ff67aa45952f42f1d9947b3759bcf37b97e87a55267bae2bfc4926385
     home: https://github.com/IndeedEng-alpha/harbor-container-webhook
@@ -119,6 +149,6 @@ entries:
     name: harbor-container-webhook
     type: application
     urls:
-    - harbor-container-webhook-0.2.0.tgz
+    - https://indeedeng.github.io/harbor-container-webhook/harbor-container-webhook-0.2.0.tgz
     version: 0.2.0
-generated: "2022-10-17T12:15:43.378220568-05:00"
+generated: "2023-12-04T14:18:54.735093057-06:00"
