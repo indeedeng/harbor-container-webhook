@@ -51,6 +51,7 @@ rules:
       - '^docker.io/(library/)?ubuntu:.*$'
     replace: 'harbor.example.com/ubuntu-proxy'
     checkUpstream: true # tests if the manifest for the rewritten image exists
+    authSecretName: harbor-example-image-pull-secret # optional, defaults to "" - secret in the webhook namespace for authenticating to harbor.example.com
 ```
 Local Development
 ===
