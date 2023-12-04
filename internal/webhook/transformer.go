@@ -1,11 +1,14 @@
 package webhook
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -13,6 +16,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -55,44 +61,38 @@ func init() {
 
 var invalidMetricChars = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
-type multiTransformer struct {
-	transformers []*ruleTransformer
+// ContainerTransformer rewrites docker image references for harbor proxy cache projects.
+type ContainerTransformer interface {
+	// Name returns the name of the transformer rule
+	Name() string
+
+	// RewriteImage takes a docker image reference and returns the same image reference rewritten for a harbor
+	// proxy cache project endpoint, if one is available, else returns the original image reference.
+	RewriteImage(imageRef string) (string, error)
+
+	// CheckUpstream ensures that the docker image reference exists in the upstream registry
+	// and returns if the image exists, or an error if the registry can't be contacted.
+	CheckUpstream(ctx context.Context, imageRef string, platform *v1.Platform) (bool, error)
 }
 
-func NewMultiTransformer(rules []config.ProxyRule) (ContainerTransformer, error) {
-	transformers := make([]*ruleTransformer, 0, len(rules))
+func MakeTransformers(rules []config.ProxyRule, client client.Client) ([]ContainerTransformer, error) {
+	transformers := make([]ContainerTransformer, 0, len(rules))
 	for _, rule := range rules {
 		transformer, err := newRuleTransformer(rule)
+		transformer.client = client
 		if err != nil {
 			return nil, err
 		}
 		transformers = append(transformers, transformer)
 	}
-	return &multiTransformer{transformers: transformers}, nil
-}
-
-func (t *multiTransformer) RewriteImage(imageRef, platform, os string) (string, error) {
-	for _, transformer := range t.transformers {
-		updatedRef, err := transformer.RewriteImage(imageRef, platform, os)
-		if err != nil {
-			return "", fmt.Errorf("transformer %q failed to update imageRef %q: %w", transformer.rule.Name, imageRef, err)
-		}
-		if updatedRef != imageRef {
-			if transformer.rule.CheckUpstream {
-				if err := transformer.checkUpstream(updatedRef, &v1.Platform{Architecture: platform, OS: os}); err != nil {
-					logger.Info(fmt.Sprintf("skipping rewriting %q to %q, could not fetch image manifest: %s", imageRef, updatedRef, err.Error()))
-					continue
-				}
-			}
-			return updatedRef, nil
-		}
-	}
-	return imageRef, nil
+	return transformers, nil
 }
 
 type ruleTransformer struct {
 	rule       config.ProxyRule
 	metricName string
+
+	client client.Client
 
 	matches  []*regexp.Regexp
 	excludes []*regexp.Regexp
@@ -125,16 +125,64 @@ func newRuleTransformer(rule config.ProxyRule) (*ruleTransformer, error) {
 	return transformer, nil
 }
 
-func (t *ruleTransformer) checkUpstream(imageRef string, platform *v1.Platform) error {
-	if _, err := crane.Manifest(imageRef, crane.WithPlatform(platform)); err != nil {
-		upstreamErrors.WithLabelValues(t.metricName).Inc()
-		return err
-	}
-	upstream.WithLabelValues(t.metricName).Inc()
-	return nil
+func (t *ruleTransformer) Name() string {
+	return t.rule.Name
 }
 
-func (t *ruleTransformer) RewriteImage(imageRef, _, _ string) (string, error) {
+func (t *ruleTransformer) CheckUpstream(ctx context.Context, imageRef string, platform *v1.Platform) (bool, error) {
+	if !t.rule.CheckUpstream {
+		return true, nil
+	}
+
+	options := make([]crane.Option, 0)
+	if t.rule.AuthSecretName != "" {
+		auth, err := t.auth(ctx)
+		if err != nil {
+			return false, err
+		}
+		options = append(options, crane.WithAuth(auth))
+	}
+	options = append(options, crane.WithPlatform(platform), crane.WithContext(ctx))
+	if _, err := crane.Manifest(imageRef, options...); err != nil {
+		upstreamErrors.WithLabelValues(t.metricName).Inc()
+		return false, err
+	}
+	upstream.WithLabelValues(t.metricName).Inc()
+	return true, nil
+}
+
+func (t *ruleTransformer) auth(ctx context.Context) (authn.Authenticator, error) {
+	var secret corev1.Secret
+	logger.Info("token key: ", "key", client.ObjectKey{Namespace: t.rule.Namespace, Name: t.rule.AuthSecretName})
+	if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.rule.Namespace, Name: t.rule.AuthSecretName}, &secret); err != nil {
+		return nil, fmt.Errorf("failed to get secret %q for upstream manifests: %w", t.rule.AuthSecretName, err)
+	}
+
+	if dockerConfigJSONBytes, dockerConfigJSONExists := secret.Data[corev1.DockerConfigJsonKey]; (secret.Type == corev1.SecretTypeDockerConfigJson) && dockerConfigJSONExists && (len(dockerConfigJSONBytes) > 0) {
+		dockerConfigJSON := DockerConfigJSON{}
+		if err := json.Unmarshal(dockerConfigJSONBytes, &dockerConfigJSON); err != nil {
+			return nil, err
+		}
+		// TODO: full keyring support?
+		if len(dockerConfigJSON.Auths) != 1 {
+			return nil, fmt.Errorf("only .dockerconfigjson with one auth method is supported, found %d", len(dockerConfigJSON.Auths))
+		}
+		for _, method := range dockerConfigJSON.Auths {
+			if method.Auth != "" {
+				user, pass, err := decodeDockerConfigFieldAuth(method.Auth)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse auth docker config auth field in secret %q", t.rule.AuthSecretName)
+				}
+				return &authn.Basic{Username: user, Password: pass}, nil
+			}
+			return &authn.Basic{Username: method.Username, Password: method.Password}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to parse auth secret %q, no docker config found", t.rule.AuthSecretName)
+}
+
+func (t *ruleTransformer) RewriteImage(imageRef string) (string, error) {
 	start := time.Now()
 	updatedRef, err := t.rewriteImage(imageRef)
 	duration := time.Since(start)

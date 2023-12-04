@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"runtime"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	"gomodules.xyz/jsonpatch/v2"
@@ -15,12 +17,9 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// +kubebuilder:webhook:path=/webhook-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
 
 var (
 	logger = ctrl.Log.WithName("mutator")
@@ -37,19 +36,12 @@ func init() {
 	metrics.Registry.MustRegister(imageMutation)
 }
 
-// ContainerTransformer rewrites docker image references for harbor proxy cache projects.
-type ContainerTransformer interface {
-	// RewriteImage takes a docker image reference and returns the same image reference rewritten for a harbor
-	// proxy cache project endpoint, if one is available, else returns the original image reference.
-	RewriteImage(imageRef, platformArch, os string) (string, error)
-}
-
 // PodContainerProxier mutates init containers and containers to redirect them to the harbor proxy cache if one exists.
 type PodContainerProxier struct {
-	Client      client.Client
-	Decoder     *admission.Decoder
-	Transformer ContainerTransformer
-	Verbose     bool
+	Client       client.Client
+	Decoder      *admission.Decoder
+	Transformers []ContainerTransformer
+	Verbose      bool
 
 	// kube config settings
 	KubeClientBurst int
@@ -69,17 +61,17 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	os := runtime.GOOS
 	nodeName := pod.Spec.NodeName
 	if nodeName != "" {
-		platformArch, os, err = p.lookupNodeArchAndOS(ctx, nodeName)
+		platformArch, os, err = p.lookupNodeArchAndOS(ctx, p.Client, nodeName)
 		if err != nil {
 			logger.Info(fmt.Sprintf("unable to lookup node for pod %q, defaulting pod to webhook runtime OS and architecture: %s", string(pod.UID), err.Error()))
 		}
 	}
 
-	initContainers, updatedInit, err := p.updateContainers(pod.Spec.InitContainers, platformArch, os, "init")
+	initContainers, updatedInit, err := p.updateContainers(ctx, pod.Spec.InitContainers, platformArch, os, "init")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	containers, updated, err := p.updateContainers(pod.Spec.Containers, platformArch, os, "normal")
+	containers, updated, err := p.updateContainers(ctx, pod.Spec.Containers, platformArch, os, "normal")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -102,18 +94,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, nodeName string) (platform, os string, err error) {
-	restCfg, err := config.GetConfig()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create rest config: %w", err)
-	}
-	restCfg.QPS = p.KubeClientQPS
-	restCfg.Burst = p.KubeClientBurst
-
-	restClient, err := client.New(restCfg, client.Options{})
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create rest client: %w", err)
-	}
+func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, restClient client.Client, nodeName string) (platform, os string, err error) {
 	node := corev1.Node{}
 	if err = restClient.Get(ctx, client.ObjectKey{Name: nodeName}, &node); err != nil {
 		return "", "", fmt.Errorf("failed to lookup node %s: %w", nodeName, err)
@@ -121,12 +102,12 @@ func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, nodeName 
 	return node.Status.NodeInfo.Architecture, node.Status.NodeInfo.OperatingSystem, nil
 }
 
-func (p *PodContainerProxier) updateContainers(containers []corev1.Container, platform, os, kind string) ([]corev1.Container, bool, error) {
+func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, platform, os, kind string) ([]corev1.Container, bool, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
 	updated := false
 	for i := range containers {
 		container := containers[i]
-		imageRef, err := p.Transformer.RewriteImage(container.Image, platform, os)
+		imageRef, err := p.rewriteImage(ctx, container.Image, platform, os)
 		if err != nil {
 			return []corev1.Container{}, false, err
 		}
@@ -141,6 +122,26 @@ func (p *PodContainerProxier) updateContainers(containers []corev1.Container, pl
 		containersReplacement = append(containersReplacement, container)
 	}
 	return containersReplacement, updated, nil
+}
+
+func (p *PodContainerProxier) rewriteImage(ctx context.Context, imageRef, platform, os string) (string, error) {
+	for _, transformer := range p.Transformers {
+		updatedRef, err := transformer.RewriteImage(imageRef)
+		if err != nil {
+			return "", fmt.Errorf("transformer %q failed to update imageRef %q: %w", transformer.Name(), imageRef, err)
+		}
+		if updatedRef != imageRef {
+			if found, err := transformer.CheckUpstream(ctx, updatedRef, &v1.Platform{Architecture: platform, OS: os}); err != nil {
+				logger.Info(fmt.Sprintf("skipping rewriting %q to %q, could not fetch image manifest: %s", imageRef, updatedRef, err.Error()))
+				continue
+			} else if !found {
+				logger.Info(fmt.Sprintf("skipping rewriting %q to %q, registry reported image not found.", imageRef, updatedRef))
+				continue
+			}
+			return updatedRef, nil
+		}
+	}
+	return imageRef, nil
 }
 
 // PodContainerProxier implements admission.DecoderInjector.

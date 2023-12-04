@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2023-12-04
+### Added
+- Support for authenticating to check if manifests exist for each proxy rule with an image pull secret.
+### Changed
+- Changes to the helm chart RBAC to support access secrets within the webhook's namespace.
+- Some minor test refactoring.
+- Deprecated kube-client-lazy-remap flag (no-op now), it has graduated to default controller runtime behavior
+
 ## [0.5.0] - 2023-05-12
 ### Added
 - Added cli flags for passing kube client qps, burst, and enabling lazy rest mapping of resources in the controller-runtime

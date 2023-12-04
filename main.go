@@ -57,8 +57,18 @@ func main() {
 		setupLog.Error(err, "unable to read config from "+configPath)
 		os.Exit(1)
 	}
+	if len(conf.Rules) == 0 {
+		setupLog.Error(err, "no proxy rules configured from "+configPath)
+		os.Exit(1)
+	}
+	setupLog.Info("webhook namespace: " + conf.Rules[0].Namespace)
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restConfig := ctrl.GetConfigOrDie()
+	restConfig.QPS = float32(kubeClientQPS)
+	restConfig.Burst = kubeClientBurst
+	restConfig.UserAgent = "harbor-container-webhook"
+
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: conf.MetricsAddr,
@@ -75,7 +85,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	transformer, err := webhook.NewMultiTransformer(conf.Rules)
+	transformers, err := webhook.MakeTransformers(conf.Rules, mgr.GetClient())
 	if err != nil {
 		setupLog.Error(err, "unable to start harbor-container-webhook")
 		os.Exit(1)
@@ -91,10 +101,10 @@ func main() {
 	}
 
 	mutate := webhook.PodContainerProxier{
-		Client:      mgr.GetClient(),
-		Decoder:     admission.NewDecoder(scheme),
-		Transformer: transformer,
-		Verbose:     conf.Verbose,
+		Client:       mgr.GetClient(),
+		Decoder:      admission.NewDecoder(scheme),
+		Transformers: transformers,
+		Verbose:      conf.Verbose,
 
 		KubeClientQPS:   float32(kubeClientQPS),
 		KubeClientBurst: kubeClientBurst,

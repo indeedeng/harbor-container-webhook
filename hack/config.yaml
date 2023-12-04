@@ -16,5 +16,6 @@ rules:
     # image refs must match at least one of the rules, and not match any excludes
     matches:
       - '^docker.io/(library/)?ubuntu:.*$'
-    replace: 'harbor.example.com/ubuntu-proxy'
+    replace: 'harbor-v2.awscmhqa2.k8s.indeed.tech/dockerhub-proxy-auth'
     checkUpstream: true # tests if the manifest for the rewritten image exists
+    authSecretName: "harborv2-qa"

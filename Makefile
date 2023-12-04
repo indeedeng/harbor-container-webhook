@@ -23,7 +23,7 @@ HELM_DIR    ?= deploy/charts/harbor-container-webhook
 
 OUTPUT_DIR  ?= bin
 
-RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
+RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 
 # check if there are any existing `git tag` values
 ifeq ($(shell git tag),)
@@ -85,7 +85,7 @@ build: $(addprefix build-,$(ARCH))
 build-%: generate ## Build binary for the specified arch
 	@$(INFO) go build $*
 	@CGO_ENABLED=0 GOOS=linux GOARCH=$* \
-		go build -o '$(OUTPUT_DIR)/ccm-csi-plugin-$*' ./cmd/ccm-csi-plugin/main.go
+		go build -o '$(OUTPUT_DIR)/harbor-container-webhook-$*' ./main.go
 	@$(OK) go build $*
 
 .PHONY: lint
@@ -139,7 +139,7 @@ hack/certs/tls.crt hack/certs/tls.key:
 
 .PHONY: hack
 hack: build hack/certs/tls.crt hack/certs/tls.key ## build and run the webhook w/hack config
-	bin/harbor-container-webhook --config hack/config.yaml --kube-client-qps=5 --kube-client-burst=10 --kube-client-lazy-remap
+	bin/harbor-container-webhook-* --config hack/config.yaml --kube-client-qps=5 --kube-client-burst=10
 
 .PHONY: hack-test
 hack-test: ## curl the admission and no-op json bodies to the webhook

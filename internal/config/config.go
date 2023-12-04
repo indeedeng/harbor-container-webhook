@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -15,7 +16,29 @@ func LoadConfiguration(path string) (*Configuration, error) {
 	if err := yaml.Unmarshal(data, conf); err != nil {
 		return nil, err
 	}
+
+	ns := detectNamespace()
+	for i := range conf.Rules {
+		conf.Rules[i].Namespace = ns
+	}
 	return conf, nil
+}
+
+func detectNamespace() string {
+	// This way assumes you've set the POD_NAMESPACE environment variable using the downward API.
+	// This check has to be done first for backwards compatibility with the way InClusterConfig was originally set up
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+
+	// Fall back to the namespace associated with the service account token, if available
+	if data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		if ns := strings.TrimSpace(string(data)); len(ns) > 0 {
+			return ns
+		}
+	}
+
+	return "default"
 }
 
 // Configuration loads and keeps the related configuration items for the webhook.
@@ -48,8 +71,14 @@ type ProxyRule struct {
 	Excludes []string `yaml:"excludes"`
 	// Replace is the string used to rewrite the registry in matching rules.
 	Replace string `yaml:"replace"`
+
 	// CheckUpstream enables an additional check to ensure the image manifest exists before rewriting.
 	// If the webhook lacks permissions to fetch the image manifest or the registry is down, the image
 	// will not be rewritten. Experimental.
 	CheckUpstream bool `yaml:"checkUpstream"`
+	// AuthSecretName is a reference to an image pull secret (must be .dockerconfigjson type) which
+	// will be used to authenticate if `checkUpstream` is set. Unused if not specified or `checkUpstream` is false.
+	AuthSecretName string `yaml:"authSecretName"`
+	// Namespace that the webhook is running in, used for accessing secrets for authenticated proxy rules
+	Namespace string
 }
