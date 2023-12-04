@@ -5,10 +5,9 @@
 replicaCount: 1
 
 image:
-  repository: cnmcavoy/harbor-container-webhook
+  repository: ghcr.io/indeedeng/harbor-container-webhook
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart version.
-  tag: "v0.5.0"
+  tag: "main"
 
 imagePullSecrets: []
 nameOverride: ""

@@ -1,17 +1,28 @@
-# harbor-container-webhook
+harbor-container-webhook
 =========
 
-# Project Overview
-
-harbor-container-webhook is a kubernetes mutating webhook which rewrites container images to use a Harbor proxy cache.
+A kubernetes mutating webhook which rewrites container images to use a Harbor proxy cache.
 This is typically useful for mirroring public registries that have low rate limits, such as dockerhub, or limiting
 public bandwidth usage, by mirroring images in a local Harbor registry.
 
 harbor-container-webhook inspects pod requests in a kubernetes cluster and rewrites the container image registry of
 matching images.
 
-# Configuration
+* [Prerequisites](#prerequisites)
+* [Installing](#installing)
+* [Usage](#usage)
+* [Local Development](#local-development)
 
+Prerequisites
+===
+Requires kubernetes 1.17+ and can either be installed via helm or bare manifests.
+
+Installing
+===
+See the helm chart available in the /deploy directory.
+
+Usage
+===
 The harbor-container-webhook rewrites are managed by configuration rules. Each rule contains a list of regular
 expressions to match on, as well as an optional list of regular expressions to exclude. For each container image
 reference which matches at least one match rule and none of the exclusion rules, then the registry is replaced
@@ -41,42 +52,38 @@ rules:
     replace: 'harbor.example.com/ubuntu-proxy'
     checkUpstream: true # tests if the manifest for the rewritten image exists
 ```
-# Local Development
-
+Local Development
+===
 `make help` prints out the help info for local development:
 
 ```
-build        build harbor-container-webhook binary
-deps         download go modules
-docker-build build the docker image
-docker-push  push the docker image
-fmt          ensure consistent code style
-hack         build and run the webhook w/hack config
-hack-test    curl the admission and no-op json bodies to the webhook
-help         displays this help message
-lint         run golangci-lint
-test         run go tests
-
+build         Build binary for the specified arch
+docker.build  Build the docker image
+fmt           ensure consistent code style
+generate      Generate code
+hack-test     curl the admission and no-op json bodies to the webhook
+hack          build and run the webhook w/hack config
+helm.build    Build helm chart
+helm.docs     Generate helm docs
+help          displays this help message
+lint          run golangci-lint
+test          Run tests
 ```
 
 Ensure tests and linters pass with `make lint test`.
 
 The webhook can be run locally with `make hack` and then `make hack-test` to submit sample responses to the webhook.
 
-# Deployment
-
-deploy/charts contains a helm chart which can deploy the harbor-container-webhook.
-
-# Contributing
-
+Contributing
+===
 We welcome contributions! Feel free to help make the harbor-container-webhook better.
 
-# Code of Conduct
-
+Code of Conduct
+===
 harbor-container-webhook is governed by the [Contributer Covenant v1.4.1](CODE_OF_CONDUCT.md)
 
 For more information please contact opensource@indeed.com.
 
-# License
-
+License
+===
 The harbor-container-webhook is open source under the [Apache 2](LICENSE) license.
