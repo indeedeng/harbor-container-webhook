@@ -113,7 +113,6 @@ HELM_VERSION ?= $(shell helm show chart $(HELM_DIR) | grep 'version:' | sed 's/v
 helm.build: ## Build helm chart
 	@$(INFO) helm package
 	@helm package $(HELM_DIR) --dependency-update --destination $(OUTPUT_DIR)/chart
-	@mv $(OUTPUT_DIR)/chart/harbor-container-webhook-$(HELM_VERSION).tgz $(OUTPUT_DIR)/chart/harbor-container-webhook.tgz
 	@$(OK) helm package
 
 # ====================================================================================
