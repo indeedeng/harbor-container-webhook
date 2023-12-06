@@ -5,8 +5,8 @@ metadata:
   name: {{ include "harbor-container-webhook.fullname" . }}
   labels:
     {{- include "harbor-container-webhook.labels" . | nindent 4 }}
-    {{- if .Values.serviceMonitor.labels }}
-    {{- toYaml .Values.serviceMonitor.labels | nindent 4 }}
+    {{- if .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml .Values.metrics.serviceMonitor.labels | nindent 4 }}
     {{- end }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -19,7 +19,7 @@ spec:
   endpoints:
     - port: prometheus
       path: /metrics
-      scheme: {{ .Values.serviceMonitor.scheme }}
+      scheme: {{ .Values.metrics.serviceMonitor.scheme }}
       {{- if .Values.metrics.serviceMonitor.interval }}
       interval: {{ .Values.metrics.serviceMonitor.interval }}
       {{- end }}
