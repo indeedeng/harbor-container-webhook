@@ -184,35 +184,34 @@ func (t *ruleTransformer) auth(ctx context.Context) (authn.Authenticator, error)
 
 func (t *ruleTransformer) RewriteImage(imageRef string) (string, error) {
 	start := time.Now()
-	updatedRef, err := t.rewriteImage(imageRef)
+	rewritten, updatedRef, err := t.doRewriteImage(imageRef)
 	duration := time.Since(start)
 	if err != nil {
 		rewriteErrors.WithLabelValues(t.metricName).Inc()
-	} else {
+	} else if rewritten {
 		rewrite.WithLabelValues(t.metricName).Inc()
 		rewriteTime.WithLabelValues(t.metricName).Observe(duration.Seconds())
 	}
 	return updatedRef, err
 }
 
-func (t *ruleTransformer) rewriteImage(imageRef string) (string, error) {
+func (t *ruleTransformer) doRewriteImage(imageRef string) (rewritten bool, updatedRef string, err error) {
 	registry, err := RegistryFromImageRef(imageRef)
 	if err != nil {
-		rewriteErrors.WithLabelValues(t.metricName).Inc()
-		return "", err
+		return false, "", err
 	}
 	// shenanigans to get a fully normalized ref, e.g 'ubuntu' -> 'docker.io/library/ubuntu:latest'
 	normalizedRef, err := ReplaceRegistryInImageRef(imageRef, registry)
 	if err != nil {
-		rewriteErrors.WithLabelValues(t.metricName).Inc()
-		return "", err
+		return false, "", err
 	}
 
 	if t.findMatch(normalizedRef) && !t.anyExclusion(normalizedRef) {
-		return ReplaceRegistryInImageRef(imageRef, t.rule.Replace)
+		updatedRef, err = ReplaceRegistryInImageRef(imageRef, t.rule.Replace)
+		return true, updatedRef, err
 	}
 
-	return imageRef, nil
+	return false, imageRef, nil
 }
 
 func (t *ruleTransformer) findMatch(imageRef string) bool {

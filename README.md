@@ -17,9 +17,24 @@ Prerequisites
 ===
 Requires kubernetes 1.17+ and can either be installed via helm or bare manifests.
 
-Installing
+Installing with helm
 ===
-See the helm chart available in the /deploy directory.
+
+Option 1: Install from chart repository
+```shell
+helm repo add harbor-container-webhook https://indeedeng.github.io/harbor-container-webhook/
+
+helm install harbor-container-webhook harbor-container-webhook/harbor-container-webhook -n harbor-container-webhook --create-namespace 
+```
+
+Option 2: Install chart from local build
+
+Build and install the Helm chart locally after cloning the repository.
+```shell
+make helm.build
+
+helm install harbor-container-webhook ./bin/chart/harbor-container-webhook.tgz -n harbor-container-webhook --create-namespace
+```
 
 Usage
 ===
