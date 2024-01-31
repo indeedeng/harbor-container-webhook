@@ -127,7 +127,7 @@ docker.build: docker.buildx.setup ## Build the docker image
 
 docker.buildx.setup:
 	@$(INFO) docker buildx setup
-	@docker buildx ls 2>/dev/null | grep -vq $(DOCKER_BUILDX_BUILDER) || docker buildx create --name $(DOCKER_BUILDX_BUILDER) --driver docker-container --driver-opt network=host --bootstrap --use
+	@docker buildx ls 2>/dev/null | grep -vq $(DOCKER_BUILDX_BUILDER) || docker buildx create --name $(DOCKER_BUILDX_BUILDER) --driver docker-container --driver-opt network=host --use
 	@$(OK) docker buildx setup
 
 # ====================================================================================

@@ -20,6 +20,9 @@ func LoadConfiguration(path string) (*Configuration, error) {
 	ns := detectNamespace()
 	for i := range conf.Rules {
 		conf.Rules[i].Namespace = ns
+		if len(conf.Rules[i].Platforms) == 0 {
+			conf.Rules[i].Platforms = []string{"linux/amd64"}
+		}
 	}
 	return conf, nil
 }
@@ -76,6 +79,8 @@ type ProxyRule struct {
 	// If the webhook lacks permissions to fetch the image manifest or the registry is down, the image
 	// will not be rewritten. Experimental.
 	CheckUpstream bool `yaml:"checkUpstream"`
+	// List of the required platforms to check for if CheckUpstream is set. Defaults to "linux/amd64" if unset.
+	Platforms []string `yaml:"platforms"`
 	// AuthSecretName is a reference to an image pull secret (must be .dockerconfigjson type) which
 	// will be used to authenticate if `checkUpstream` is set. Unused if not specified or `checkUpstream` is false.
 	AuthSecretName string `yaml:"authSecretName"`

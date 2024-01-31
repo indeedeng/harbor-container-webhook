@@ -8,11 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/containerd/images"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/indeedeng-alpha/harbor-container-webhook/internal/config"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -72,7 +75,7 @@ type ContainerTransformer interface {
 
 	// CheckUpstream ensures that the docker image reference exists in the upstream registry
 	// and returns if the image exists, or an error if the registry can't be contacted.
-	CheckUpstream(ctx context.Context, imageRef string, platform *v1.Platform) (bool, error)
+	CheckUpstream(ctx context.Context, imageRef string) (bool, error)
 }
 
 func MakeTransformers(rules []config.ProxyRule, client client.Client) ([]ContainerTransformer, error) {
@@ -129,7 +132,7 @@ func (t *ruleTransformer) Name() string {
 	return t.rule.Name
 }
 
-func (t *ruleTransformer) CheckUpstream(ctx context.Context, imageRef string, platform *v1.Platform) (bool, error) {
+func (t *ruleTransformer) CheckUpstream(ctx context.Context, imageRef string) (bool, error) {
 	if !t.rule.CheckUpstream {
 		return true, nil
 	}
@@ -142,13 +145,52 @@ func (t *ruleTransformer) CheckUpstream(ctx context.Context, imageRef string, pl
 		}
 		options = append(options, crane.WithAuth(auth))
 	}
-	options = append(options, crane.WithPlatform(platform), crane.WithContext(ctx))
-	if _, err := crane.Manifest(imageRef, options...); err != nil {
+	// we don't pass in the platform to crane to retrieve the full manifest list for multi-arch
+	options = append(options, crane.WithContext(ctx))
+	manifestBytes, err := crane.Manifest(imageRef, options...)
+	if err != nil {
 		upstreamErrors.WithLabelValues(t.metricName).Inc()
 		return false, err
 	}
-	upstream.WithLabelValues(t.metricName).Inc()
-	return true, nil
+
+	// try and parse the manifest to decode the MediaType to determine if it's a manifest or manifest list
+	manifest := slimManifest{}
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		upstreamErrors.WithLabelValues(t.metricName).Inc()
+		return false, fmt.Errorf("failed to parse manifest %s payload=%s: %w", imageRef, string(manifestBytes), err)
+	}
+
+	switch manifest.MediaType {
+	case images.MediaTypeDockerSchema2ManifestList, ocispec.MediaTypeImageIndex:
+		manifestList := slimManifestList{}
+		if err := json.Unmarshal(manifestBytes, &manifestList); err != nil {
+			upstreamErrors.WithLabelValues(t.metricName).Inc()
+			return false, fmt.Errorf("failed to parse manifest list %s, payload=%s: %w", imageRef, string(manifestBytes), err)
+		}
+		matches := 0
+		for _, rulePlatform := range t.rule.Platforms {
+			for _, subManifest := range manifestList.Manifests {
+				subPlatform := subManifest.Platform.OS + "/" + subManifest.Platform.Architecture
+				if subPlatform == rulePlatform {
+					matches++
+					break
+				}
+			}
+		}
+		if matches == len(t.rule.Platforms) {
+			upstream.WithLabelValues(t.metricName).Inc()
+			return true, nil
+		}
+
+		return false, nil
+	case images.MediaTypeDockerSchema1Manifest, images.MediaTypeDockerSchema2Manifest, ocispec.MediaTypeImageManifest:
+		upstream.WithLabelValues(t.metricName).Inc()
+		return true, nil
+	default:
+		logger.Info(fmt.Sprintf("unknown manifest media type: %s, rule=%s,imageRef=%s", manifest.MediaType, t.rule.Name, imageRef))
+		upstream.WithLabelValues(t.metricName).Inc()
+		return true, nil
+	}
 }
 
 func (t *ruleTransformer) auth(ctx context.Context) (authn.Authenticator, error) {

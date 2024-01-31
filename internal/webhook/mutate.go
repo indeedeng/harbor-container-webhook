@@ -5,13 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"runtime"
-
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/prometheus/client_golang/prometheus"
-
-	"gomodules.xyz/jsonpatch/v2"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -57,21 +52,11 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	platformArch := runtime.GOARCH
-	os := runtime.GOOS
-	nodeName := pod.Spec.NodeName
-	if nodeName != "" {
-		platformArch, os, err = p.lookupNodeArchAndOS(ctx, p.Client, nodeName)
-		if err != nil {
-			logger.Info(fmt.Sprintf("unable to lookup node for pod %q, defaulting pod to webhook runtime OS and architecture: %s", string(pod.UID), err.Error()))
-		}
-	}
-
-	initContainers, updatedInit, err := p.updateContainers(ctx, pod.Spec.InitContainers, platformArch, os, "init")
+	initContainers, updatedInit, err := p.updateContainers(ctx, pod.Spec.InitContainers, "init")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	containers, updated, err := p.updateContainers(ctx, pod.Spec.Containers, platformArch, os, "normal")
+	containers, updated, err := p.updateContainers(ctx, pod.Spec.Containers, "normal")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -85,12 +70,6 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	if p.Verbose {
-		patch, err := jsonpatch.CreatePatch(req.Object.Raw, marshaledPod)
-		if err == nil { // errors will be surfaced in return below
-			logger.Info(fmt.Sprintf("patch for %s: %v", string(pod.UID), patch))
-		}
-	}
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
@@ -99,15 +78,16 @@ func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, restClien
 	if err = restClient.Get(ctx, client.ObjectKey{Name: nodeName}, &node); err != nil {
 		return "", "", fmt.Errorf("failed to lookup node %s: %w", nodeName, err)
 	}
+	logger.Info(fmt.Sprintf("node %v", node))
 	return node.Status.NodeInfo.Architecture, node.Status.NodeInfo.OperatingSystem, nil
 }
 
-func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, platform, os, kind string) ([]corev1.Container, bool, error) {
+func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, kind string) ([]corev1.Container, bool, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
 	updated := false
 	for i := range containers {
 		container := containers[i]
-		imageRef, err := p.rewriteImage(ctx, container.Image, platform, os)
+		imageRef, err := p.rewriteImage(ctx, container.Image)
 		if err != nil {
 			return []corev1.Container{}, false, err
 		}
@@ -124,20 +104,21 @@ func (p *PodContainerProxier) updateContainers(ctx context.Context, containers [
 	return containersReplacement, updated, nil
 }
 
-func (p *PodContainerProxier) rewriteImage(ctx context.Context, imageRef, platform, os string) (string, error) {
+func (p *PodContainerProxier) rewriteImage(ctx context.Context, imageRef string) (string, error) {
 	for _, transformer := range p.Transformers {
 		updatedRef, err := transformer.RewriteImage(imageRef)
 		if err != nil {
 			return "", fmt.Errorf("transformer %q failed to update imageRef %q: %w", transformer.Name(), imageRef, err)
 		}
 		if updatedRef != imageRef {
-			if found, err := transformer.CheckUpstream(ctx, updatedRef, &v1.Platform{Architecture: platform, OS: os}); err != nil {
-				logger.Info(fmt.Sprintf("skipping rewriting %q to %q, could not fetch image manifest: %s", imageRef, updatedRef, err.Error()))
+			if found, err := transformer.CheckUpstream(ctx, updatedRef); err != nil {
+				logger.Info(fmt.Sprintf("transformer %q skipping rewriting %q to %q, could not fetch image manifest: %s", transformer.Name(), imageRef, updatedRef, err.Error()))
 				continue
 			} else if !found {
-				logger.Info(fmt.Sprintf("skipping rewriting %q to %q, registry reported image not found.", imageRef, updatedRef))
+				logger.Info(fmt.Sprintf("transformer %q skipping rewriting %q to %q, registry reported image not found.", transformer.Name(), imageRef, updatedRef))
 				continue
 			}
+			logger.Info(fmt.Sprintf("transformer %q rewriting %q to %q", transformer.Name(), imageRef, updatedRef))
 			return updatedRef, nil
 		}
 	}

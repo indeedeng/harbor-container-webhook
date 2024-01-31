@@ -93,6 +93,9 @@ rules: []
 #      - '^docker.io/(library/)?ubuntu:.*$'
 #    replace: 'harbor.example.com/ubuntu-proxy'
 #    checkUpstream: true # tests if the manifest for the rewritten image exists
+#    platforms: # defaults to linux/amd64, only used if checkUpstream is set
+#      - linux/amd64
+#      - linux/arm64
 
 extraRules: []
 

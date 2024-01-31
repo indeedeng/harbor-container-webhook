@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2024-01-31
+### Changed
+- Instead of querying for the node architecture and os when inspecting pods, which rarely worked, use `platforms` on the config to determine which platforms should be required when checking upstream.
+
 ## [0.6.3] - 2024-01-26
 ### Fixed
 - Fixed rewrite_success prometheus metric counting every rule invocation, instead of only rewrites
