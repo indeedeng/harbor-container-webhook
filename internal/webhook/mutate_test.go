@@ -93,7 +93,7 @@ func TestPodContainerProxier_rewriteImage(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			rewritten, err := proxier.rewriteImage(context.TODO(), tc.image, tc.platform, tc.os)
+			rewritten, err := proxier.rewriteImage(context.TODO(), tc.image)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, rewritten)
 		})

@@ -34,7 +34,7 @@ func init() {
 // PodContainerProxier mutates init containers and containers to redirect them to the harbor proxy cache if one exists.
 type PodContainerProxier struct {
 	Client       client.Client
-	Decoder      *admission.Decoder
+	Decoder      admission.Decoder
 	Transformers []ContainerTransformer
 	Verbose      bool
 
@@ -129,7 +129,7 @@ func (p *PodContainerProxier) rewriteImage(ctx context.Context, imageRef string)
 // A decoder will be automatically injected.
 
 // InjectDecoder injects the decoder.
-func (p *PodContainerProxier) InjectDecoder(d *admission.Decoder) error {
+func (p *PodContainerProxier) InjectDecoder(d admission.Decoder) error {
 	p.Decoder = d
 	return nil
 }
