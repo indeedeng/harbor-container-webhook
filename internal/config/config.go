@@ -36,7 +36,7 @@ func detectNamespace() string {
 
 	// Fall back to the namespace associated with the service account token, if available
 	if data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
-		if ns := strings.TrimSpace(string(data)); len(ns) > 0 {
+		if ns := strings.TrimSpace(string(data)); ns != "" {
 			return ns
 		}
 	}

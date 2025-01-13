@@ -23,7 +23,7 @@ HELM_DIR    ?= deploy/charts/harbor-container-webhook
 
 OUTPUT_DIR  ?= bin
 
-RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
 
 # check if there are any existing `git tag` values
 ifeq ($(shell git tag),)

@@ -30,10 +30,6 @@ linters-settings:
         sizeThreshold: 512
   gocyclo:
     min-complexity: 16
-  golint:
-    min-confidence: 0
-  govet:
-    check-shadowing: false
   lll:
     line-length: 300
   misspell:
@@ -57,9 +53,7 @@ linters:
     - dupl
     - durationcheck
     - errcheck
-    - execinquery
     - exhaustive
-    - exportloopref
     - gocritic
     - godot
     - gofmt
