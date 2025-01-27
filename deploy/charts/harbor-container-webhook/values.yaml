@@ -4,6 +4,15 @@
 
 replicaCount: 1
 
+# -- Minimum available pods set in PodDisruptionBudget.
+# Define either 'minAvailable' or 'maxUnavailable', never both.
+minAvailable: 1
+# -- Maximum unavailable pods set in PodDisruptionBudget. If set, 'minAvailable' is ignored.
+# maxUnavailable: 1
+# -- Eviction policy for unhealthy pods guarded by PodDisruptionBudget.
+# Ref: https://kubernetes.io/blog/2023/01/06/unhealthy-pod-eviction-policy-for-pdbs/
+unhealthyPodEvictionPolicy: ""
+
 image:
   repository: ghcr.io/indeedeng/harbor-container-webhook
   pullPolicy: IfNotPresent
@@ -29,7 +38,7 @@ podSecurityContext: {}
 securityContext:
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
   runAsUser: 65532

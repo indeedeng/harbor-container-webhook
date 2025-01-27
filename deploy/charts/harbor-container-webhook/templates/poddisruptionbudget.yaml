@@ -1,0 +1,21 @@
+{{- if gt (int .Values.replicaCount) 1 }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    {{- include "harbor-container-webhook.labels" . | nindent 4 }}
+  name: {{ include "harbor-container-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "harbor-container-webhook.selectorLabels" . | nindent 6 }}
+  {{- if and .Values.minAvailable (not (hasKey .Values.controller "maxUnavailable")) }}
+  minAvailable: {{ .Values.minAvailable }}
+  {{- else if .Values.maxUnavailable }}
+  maxUnavailable: {{ .Values.maxUnavailable }}
+  {{- end }}
+  {{- if .Values.unhealthyPodEvictionPolicy }}
+  unhealthyPodEvictionPolicy: {{ .Values.unhealthyPodEvictionPolicy }}
+  {{- end }}
+{{ end }}
