@@ -63,6 +63,12 @@ affinity: {}
 
 topologySpreadConstraints: {}
 
+# only use one of the following two options for the pdb, if replicas > 1:
+# minAvailable: 1
+# maxUnavailable: 1
+
+# unhealthyPodEvictionPolicy: ""
+
 extraArgs: []
 extraEnv: []
 
