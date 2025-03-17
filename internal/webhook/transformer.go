@@ -139,7 +139,7 @@ func (t *ruleTransformer) CheckUpstream(ctx context.Context, imageRef string) (b
 
 	options := make([]crane.Option, 0)
 	if t.rule.AuthSecretName != "" {
-		auth, err := t.auth(ctx)
+		auth, err := t.auth(ctx, imageRef)
 		if err != nil {
 			return false, err
 		}
@@ -193,7 +193,7 @@ func (t *ruleTransformer) CheckUpstream(ctx context.Context, imageRef string) (b
 	}
 }
 
-func (t *ruleTransformer) auth(ctx context.Context) (authn.Authenticator, error) {
+func (t *ruleTransformer) auth(ctx context.Context, imageRef string) (authn.Authenticator, error) {
 	var secret corev1.Secret
 	logger.Info("token key: ", "key", client.ObjectKey{Namespace: t.rule.Namespace, Name: t.rule.AuthSecretName})
 	if err := t.client.Get(ctx, client.ObjectKey{Namespace: t.rule.Namespace, Name: t.rule.AuthSecretName}, &secret); err != nil {
@@ -205,19 +205,18 @@ func (t *ruleTransformer) auth(ctx context.Context) (authn.Authenticator, error)
 		if err := json.Unmarshal(dockerConfigJSONBytes, &dockerConfigJSON); err != nil {
 			return nil, err
 		}
-		// TODO: full keyring support?
-		if len(dockerConfigJSON.Auths) != 1 {
-			return nil, fmt.Errorf("only .dockerconfigjson with one auth method is supported, found %d", len(dockerConfigJSON.Auths))
-		}
-		for _, method := range dockerConfigJSON.Auths {
-			if method.Auth != "" {
-				user, pass, err := decodeDockerConfigFieldAuth(method.Auth)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse auth docker config auth field in secret %q", t.rule.AuthSecretName)
+		for key, method := range dockerConfigJSON.Auths {
+			keyRegex := regexp.MustCompile(key)
+			if keyRegex.Find([]byte(imageRef)) != nil {
+				if method.Auth != "" {
+					user, pass, err := decodeDockerConfigFieldAuth(method.Auth)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse auth docker config auth field in secret %q", t.rule.AuthSecretName)
+					}
+					return &authn.Basic{Username: user, Password: pass}, nil
 				}
-				return &authn.Basic{Username: user, Password: pass}, nil
+				return &authn.Basic{Username: method.Username, Password: method.Password}, nil
 			}
-			return &authn.Basic{Username: method.Username, Password: method.Password}, nil
 		}
 	}
 
