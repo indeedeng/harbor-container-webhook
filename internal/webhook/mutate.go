@@ -6,30 +6,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	corev1 "k8s.io/api/core/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var (
 	logger = ctrl.Log.WithName("mutator")
-
-	imageMutation = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "hcw",
-		Subsystem: "mutations",
-		Name:      "image_rewrite",
-		Help:      "image rewrite mutation",
-	}, []string{"container_name", "kind", "original_image", "rewritten_image"})
 )
-
-func init() {
-	metrics.Registry.MustRegister(imageMutation)
-}
 
 // PodContainerProxier mutates init containers and containers to redirect them to the harbor proxy cache if one exists.
 type PodContainerProxier struct {
@@ -96,7 +82,6 @@ func (p *PodContainerProxier) updateContainers(ctx context.Context, containers [
 		}
 		if imageRef != container.Image {
 			logger.Info(fmt.Sprintf("rewriting the image of %q from %q to %q", container.Name, container.Image, imageRef))
-			imageMutation.WithLabelValues(container.Name, kind, container.Image, imageRef).Inc()
 		}
 		container.Image = imageRef
 		containersReplacement = append(containersReplacement, container)

@@ -17,13 +17,13 @@ DOCKER_BUILDX_BUILDER ?= "harbor-container-webhook"
 all: $(addprefix build-,$(ARCH))
 
 # Image registry for build/push image targets
-IMAGE_REGISTRY ?= ghcr.io/indeedeng-alpha/harbor-container-webhook
+IMAGE_REGISTRY ?= ghcr.io/indeedeng/harbor-container-webhook
 
 HELM_DIR    ?= deploy/charts/harbor-container-webhook
 
 OUTPUT_DIR  ?= bin
 
-RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
+RUN_GOLANGCI_LINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 
 # check if there are any existing `git tag` values
 ifeq ($(shell git tag),)

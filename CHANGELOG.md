@@ -4,9 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.2] - 2025-03-11
-### Changed
+## [0.8.0] - 2025-03-17
+### Added
 - Add support for topologySpreadConstraints
+- Add pdb to helm chart
+### Changed
+- Changed to support multiple image pull secret values in a secret
+- Updated downstream kubernetes libraries
+### Fixed
+- Fixed rbac necessary for image pull secrets to correctly reference a cluster role
+### Removed
+- Removed image mutation metrics as they had too high cardinality vs usefulness.
 
 ## [0.7.1] - 2025-01-13
 ### Changed
