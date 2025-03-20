@@ -44,6 +44,8 @@ reference which matches at least one match rule and none of the exclusion rules,
 by the `replace` contents of the rule. If `checkUpstream` is enabled, the webhook will first fetch the manifest
 the rewritten container image reference and verify it exists before rewriting the image.
 
+You can also update the `imagePullSecrets` of a modified pod to have the right docker secret to connect to the modified registry. For that, put `replaceImagePullSecrets` to `true` and be sure that `authSecretName` is set with the Kubernetes secret that you want to add to `imagePullSecrets`. If `imagePullSecrets` already contains a secret, the `authSecretName` will be added to the list anyway.
+
 Example configuration:
 ```yaml
 port: 9443
@@ -67,6 +69,12 @@ rules:
     replace: 'harbor.example.com/ubuntu-proxy'
     checkUpstream: true # tests if the manifest for the rewritten image exists
     authSecretName: harbor-example-image-pull-secret # optional, defaults to "" - secret in the webhook namespace for authenticating to harbor.example.com
+  - name: 'docker.io rewrite rule with imagePullSecrets update'
+    matches:
+      - '^docker.io'
+    replace: 'harbor.example.com/dockerhub-proxy'
+    replaceImagePullSecrets: true # enable imagePullSecrets change for modified images
+    authSecretName: harbor-example-image-pull-secret # secret to add to imagePullSecrets on the modified pod
 ```
 Local Development
 ===

@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/indeedeng-alpha/harbor-container-webhook/internal/config"
 
 	"github.com/stretchr/testify/require"
@@ -24,6 +26,11 @@ func TestPodContainerProxier_rewriteImage(t *testing.T) {
 		},
 		{
 			Name:    "docker.io proxy cache but only ubuntu",
+			Matches: []string{"^docker.io/(library/)?ubuntu"},
+			Replace: "harbor.example.com/ubuntu-proxy",
+		},
+		{
+			Name:    "docker.io proxy cache with imagePullSecret change",
 			Matches: []string{"^docker.io/(library/)?ubuntu"},
 			Replace: "harbor.example.com/ubuntu-proxy",
 		},
@@ -96,6 +103,98 @@ func TestPodContainerProxier_rewriteImage(t *testing.T) {
 			rewritten, err := proxier.rewriteImage(context.TODO(), tc.image)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, rewritten)
+		})
+	}
+}
+
+func TestPodContainerProxier_updateImagePullSecretsWithReplaceEnabled(t *testing.T) {
+	transformers, err := MakeTransformers([]config.ProxyRule{
+		{
+			Name:                    "docker.io proxy cache with imagePullSecrets change",
+			Matches:                 []string{"^docker.io"},
+			Replace:                 "harbor.example.com/dockerhub-proxy",
+			ReplaceImagePullSecrets: true,
+			AuthSecretName:          "secret-test",
+		},
+	}, nil)
+	require.NoError(t, err)
+	proxier := PodContainerProxier{
+		Transformers: transformers,
+	}
+
+	type testcase struct {
+		name             string
+		imagePullSecrets []corev1.LocalObjectReference
+		platform         string
+		os               string
+		expected         []corev1.LocalObjectReference
+	}
+	tests := []testcase{
+		{
+			name:             "imagePullSecrets is empty, replacement is expected and secret name should be added",
+			imagePullSecrets: []corev1.LocalObjectReference{},
+			os:               "linux",
+			platform:         "amd64",
+			expected:         []corev1.LocalObjectReference{{Name: "secret-test"}},
+		},
+		{
+			name:             "imagePullSecrets has a secret, replacement is expected and secret name should be added",
+			imagePullSecrets: []corev1.LocalObjectReference{{Name: "mysecret"}},
+			os:               "linux",
+			platform:         "amd64",
+			expected:         []corev1.LocalObjectReference{{Name: "mysecret"}, {Name: "secret-test"}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			newImagePullSecrets, _, err := proxier.updateImagePullSecrets(tc.imagePullSecrets)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, newImagePullSecrets)
+		})
+	}
+}
+
+func TestPodContainerProxier_updateImagePullSecretsWithReplaceDinabled(t *testing.T) {
+	transformers, err := MakeTransformers([]config.ProxyRule{
+		{
+			Name:    "docker.io proxy cache without imagePullSecrets change",
+			Matches: []string{"^docker.io"},
+			Replace: "harbor.example.com/dockerhub-proxy",
+		},
+	}, nil)
+	require.NoError(t, err)
+	proxier := PodContainerProxier{
+		Transformers: transformers,
+	}
+
+	type testcase struct {
+		name             string
+		imagePullSecrets []corev1.LocalObjectReference
+		platform         string
+		os               string
+		expected         []corev1.LocalObjectReference
+	}
+	tests := []testcase{
+		{
+			name:             "imagePullSecrets is empty, replacement is not expected",
+			imagePullSecrets: []corev1.LocalObjectReference{},
+			os:               "linux",
+			platform:         "amd64",
+			expected:         []corev1.LocalObjectReference{},
+		},
+		{
+			name:             "imagePullSecrets has a secret, replacement is not expected",
+			imagePullSecrets: []corev1.LocalObjectReference{{Name: "mysecret"}},
+			os:               "linux",
+			platform:         "amd64",
+			expected:         []corev1.LocalObjectReference{{Name: "mysecret"}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			newImagePullSecrets, _, err := proxier.updateImagePullSecrets(tc.imagePullSecrets)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, newImagePullSecrets)
 		})
 	}
 }

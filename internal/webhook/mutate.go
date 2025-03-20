@@ -38,6 +38,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// container images
 	initContainers, updatedInit, err := p.updateContainers(ctx, pod.Spec.InitContainers, "init")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -51,6 +52,16 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	}
 	pod.Spec.InitContainers = initContainers
 	pod.Spec.Containers = containers
+
+	// imagePullSecrets
+	imagePullSecrets, updatedImagePullSecrets, err := p.updateImagePullSecrets(pod.Spec.ImagePullSecrets)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if !updatedImagePullSecrets {
+		return admission.Allowed("no updates")
+	}
+	pod.Spec.ImagePullSecrets = imagePullSecrets
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {
@@ -68,7 +79,7 @@ func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, restClien
 	return node.Status.NodeInfo.Architecture, node.Status.NodeInfo.OperatingSystem, nil
 }
 
-func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, kind string) ([]corev1.Container, bool, error) {
+func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, _ string) ([]corev1.Container, bool, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
 	updated := false
 	for i := range containers {
@@ -117,4 +128,16 @@ func (p *PodContainerProxier) rewriteImage(ctx context.Context, imageRef string)
 func (p *PodContainerProxier) InjectDecoder(d admission.Decoder) error {
 	p.Decoder = d
 	return nil
+}
+
+func (p *PodContainerProxier) updateImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) (newImagePullSecrets []corev1.LocalObjectReference, updated bool, err error) {
+	pod := &corev1.Pod{}
+	for _, transformer := range p.Transformers {
+		updated, newImagePullSecrets, err = transformer.RewriteImagePullSecrets(imagePullSecrets)
+		if err != nil {
+			return imagePullSecrets, false, err
+		}
+		logger.Info(fmt.Sprintf("rewriting the imagePullSecrets of the pod %q from %q to %q", pod.ObjectMeta.Name, imagePullSecrets, newImagePullSecrets))
+	}
+	return newImagePullSecrets, updated, nil
 }

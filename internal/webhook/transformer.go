@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -76,6 +77,9 @@ type ContainerTransformer interface {
 	// CheckUpstream ensures that the docker image reference exists in the upstream registry
 	// and returns if the image exists, or an error if the registry can't be contacted.
 	CheckUpstream(ctx context.Context, imageRef string) (bool, error)
+
+	// RewriteImagePullSecrets takes a list of kubernetes secret name and add the AuthSecretName parameter
+	RewriteImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) (bool, []corev1.LocalObjectReference, error)
 }
 
 func MakeTransformers(rules []config.ProxyRule, client client.Client) ([]ContainerTransformer, error) {
@@ -271,4 +275,44 @@ func (t *ruleTransformer) anyExclusion(imageRef string) bool {
 		}
 	}
 	return false
+}
+
+func (t *ruleTransformer) RewriteImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) (updated bool, newImagePullSecrets []corev1.LocalObjectReference, err error) {
+	if t.rule.AuthSecretName == "" && t.rule.ReplaceImagePullSecrets {
+		return false, imagePullSecrets, fmt.Errorf("replaceImagePullSecrets is enabled but no authSecretName parameter")
+	}
+	if !t.rule.ReplaceImagePullSecrets {
+		return false, imagePullSecrets, nil
+	}
+
+	start := time.Now()
+	updated, imagePullSecrets = t.doRewriteImagePullSecrets(imagePullSecrets)
+	duration := time.Since(start)
+	if updated {
+		rewrite.WithLabelValues(t.metricName).Inc()
+		rewriteTime.WithLabelValues(t.metricName).Observe(duration.Seconds())
+	} else if !updated {
+		return false, imagePullSecrets, nil
+	}
+	return true, imagePullSecrets, nil
+}
+
+func (t *ruleTransformer) doRewriteImagePullSecrets(imagePullSecrets []corev1.LocalObjectReference) (bool, []corev1.LocalObjectReference) {
+	existingSecrets := t.getExistingSecrets(imagePullSecrets)
+
+	if slices.Contains(existingSecrets, t.rule.AuthSecretName) {
+		return false, imagePullSecrets
+	}
+	newImagePullSecret := corev1.LocalObjectReference{
+		Name: t.rule.AuthSecretName,
+	}
+	imagePullSecrets = append(imagePullSecrets, newImagePullSecret)
+	return true, imagePullSecrets
+}
+
+func (t *ruleTransformer) getExistingSecrets(imagePullSecrets []corev1.LocalObjectReference) (existingSecrets []string) {
+	for _, secret := range imagePullSecrets {
+		existingSecrets = append(existingSecrets, secret.Name)
+	}
+	return existingSecrets
 }
