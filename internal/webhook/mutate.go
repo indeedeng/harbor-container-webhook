@@ -47,9 +47,6 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	if !updated && !updatedInit {
-		return admission.Allowed("no updates")
-	}
 	pod.Spec.InitContainers = initContainers
 	pod.Spec.Containers = containers
 
@@ -58,10 +55,11 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	if !updatedImagePullSecrets {
+	pod.Spec.ImagePullSecrets = imagePullSecrets
+
+	if !updated && !updatedInit && !updatedImagePullSecrets {
 		return admission.Allowed("no updates")
 	}
-	pod.Spec.ImagePullSecrets = imagePullSecrets
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {
