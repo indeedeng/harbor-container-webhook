@@ -141,7 +141,7 @@ func TestPodContainerProxier_updateImagePullSecretsWithReplaceEnabled(t *testing
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			newImagePullSecrets, _, err := proxier.updateImagePullSecrets("pod-test", tc.imagePullSecrets)
+			newImagePullSecrets, err := proxier.updateImagePullSecrets("pod-test", tc.imagePullSecrets)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, newImagePullSecrets)
 		})
@@ -180,7 +180,7 @@ func TestPodContainerProxier_updateImagePullSecretsWithReplaceDinabled(t *testin
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			newImagePullSecrets, _, err := proxier.updateImagePullSecrets("pod-test", tc.imagePullSecrets)
+			newImagePullSecrets, err := proxier.updateImagePullSecrets("pod-test", tc.imagePullSecrets)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, newImagePullSecrets)
 		})

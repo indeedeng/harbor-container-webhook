@@ -55,7 +55,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	}
 
 	// imagePullSecrets
-	imagePullSecrets, _, err := p.updateImagePullSecrets(p.getPodName(pod), pod.Spec.ImagePullSecrets)
+	imagePullSecrets, err := p.updateImagePullSecrets(p.getPodName(pod), pod.Spec.ImagePullSecrets)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -128,18 +128,18 @@ func (p *PodContainerProxier) InjectDecoder(d admission.Decoder) error {
 	return nil
 }
 
-func (p *PodContainerProxier) updateImagePullSecrets(podName string, imagePullSecrets []corev1.LocalObjectReference) (newImagePullSecrets []corev1.LocalObjectReference, updated bool, err error) {
+func (p *PodContainerProxier) updateImagePullSecrets(podName string, imagePullSecrets []corev1.LocalObjectReference) (newImagePullSecrets []corev1.LocalObjectReference, err error) {
 	for _, transformer := range p.Transformers {
-		updated, newImagePullSecrets, err = transformer.RewriteImagePullSecrets(imagePullSecrets)
+		updated, newImagePullSecrets, err := transformer.RewriteImagePullSecrets(imagePullSecrets)
 		if err != nil {
-			return imagePullSecrets, false, err
+			return imagePullSecrets, err
 		}
 		if !updated {
-			return imagePullSecrets, false, nil
+			return imagePullSecrets, nil
 		}
 		logger.Info(fmt.Sprintf("rewriting the imagePullSecrets of the pod %s from %q to %q", podName, imagePullSecrets, newImagePullSecrets))
 	}
-	return newImagePullSecrets, updated, nil
+	return newImagePullSecrets, nil
 }
 
 func (p *PodContainerProxier) getPodName(pod *corev1.Pod) (podName string) {
