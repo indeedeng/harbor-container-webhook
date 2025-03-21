@@ -125,29 +125,23 @@ func TestPodContainerProxier_updateImagePullSecretsWithReplaceEnabled(t *testing
 	type testcase struct {
 		name             string
 		imagePullSecrets []corev1.LocalObjectReference
-		platform         string
-		os               string
 		expected         []corev1.LocalObjectReference
 	}
 	tests := []testcase{
 		{
 			name:             "imagePullSecrets is empty, replacement is expected and secret name should be added",
 			imagePullSecrets: []corev1.LocalObjectReference{},
-			os:               "linux",
-			platform:         "amd64",
 			expected:         []corev1.LocalObjectReference{{Name: "secret-test"}},
 		},
 		{
 			name:             "imagePullSecrets has a secret, replacement is expected and secret name should be added",
 			imagePullSecrets: []corev1.LocalObjectReference{{Name: "mysecret"}},
-			os:               "linux",
-			platform:         "amd64",
 			expected:         []corev1.LocalObjectReference{{Name: "mysecret"}, {Name: "secret-test"}},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			newImagePullSecrets, _, err := proxier.updateImagePullSecrets(tc.imagePullSecrets)
+			newImagePullSecrets, _, err := proxier.updateImagePullSecrets("pod-test", tc.imagePullSecrets)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, newImagePullSecrets)
 		})
@@ -170,29 +164,23 @@ func TestPodContainerProxier_updateImagePullSecretsWithReplaceDinabled(t *testin
 	type testcase struct {
 		name             string
 		imagePullSecrets []corev1.LocalObjectReference
-		platform         string
-		os               string
 		expected         []corev1.LocalObjectReference
 	}
 	tests := []testcase{
 		{
 			name:             "imagePullSecrets is empty, replacement is not expected",
 			imagePullSecrets: []corev1.LocalObjectReference{},
-			os:               "linux",
-			platform:         "amd64",
 			expected:         []corev1.LocalObjectReference{},
 		},
 		{
 			name:             "imagePullSecrets has a secret, replacement is not expected",
 			imagePullSecrets: []corev1.LocalObjectReference{{Name: "mysecret"}},
-			os:               "linux",
-			platform:         "amd64",
 			expected:         []corev1.LocalObjectReference{{Name: "mysecret"}},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			newImagePullSecrets, _, err := proxier.updateImagePullSecrets(tc.imagePullSecrets)
+			newImagePullSecrets, _, err := proxier.updateImagePullSecrets("pod-test", tc.imagePullSecrets)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, newImagePullSecrets)
 		})
