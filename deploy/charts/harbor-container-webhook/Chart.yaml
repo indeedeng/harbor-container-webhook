@@ -3,7 +3,7 @@ name: harbor-container-webhook
 description: Webhook to configure pods with harbor proxy cache projects
 type: application
 version: 0.8.1
-appVersion: "0.8.0"
+appVersion: "0.9.0"
 kubeVersion: ">= 1.16.0-0"
 home: https://github.com/IndeedEng/harbor-container-webhook
 maintainers:

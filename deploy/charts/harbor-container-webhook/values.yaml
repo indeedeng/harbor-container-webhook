@@ -113,6 +113,12 @@ rules: []
 #    platforms: # defaults to linux/amd64, only used if checkUpstream is set
 #      - linux/amd64
 #      - linux/arm64
+#  - name: 'docker.io rewrite rule with imagePullSecrets update'
+#    matches:
+#      - '^docker.io'
+#    replace: 'harbor.example.com/dockerhub-proxy'
+#    replaceImagePullSecrets: true # enable imagePullSecrets change for modified images
+#    authSecretName: harbor-example-image-pull-secret # secret to add to imagePullSecrets on the modified pod
 
 extraRules: []
 

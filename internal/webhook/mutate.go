@@ -38,6 +38,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// container images
 	initContainers, updatedInit, err := p.updateContainers(ctx, pod.Spec.InitContainers, "init")
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -46,11 +47,19 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
+	pod.Spec.InitContainers = initContainers
+	pod.Spec.Containers = containers
+
 	if !updated && !updatedInit {
 		return admission.Allowed("no updates")
 	}
-	pod.Spec.InitContainers = initContainers
-	pod.Spec.Containers = containers
+
+	// imagePullSecrets
+	imagePullSecrets, err := p.updateImagePullSecrets(p.getPodName(pod), pod.Spec.ImagePullSecrets)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	pod.Spec.ImagePullSecrets = imagePullSecrets
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {
@@ -68,7 +77,7 @@ func (p *PodContainerProxier) lookupNodeArchAndOS(ctx context.Context, restClien
 	return node.Status.NodeInfo.Architecture, node.Status.NodeInfo.OperatingSystem, nil
 }
 
-func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, kind string) ([]corev1.Container, bool, error) {
+func (p *PodContainerProxier) updateContainers(ctx context.Context, containers []corev1.Container, _ string) ([]corev1.Container, bool, error) {
 	containersReplacement := make([]corev1.Container, 0, len(containers))
 	updated := false
 	for i := range containers {
@@ -117,4 +126,32 @@ func (p *PodContainerProxier) rewriteImage(ctx context.Context, imageRef string)
 func (p *PodContainerProxier) InjectDecoder(d admission.Decoder) error {
 	p.Decoder = d
 	return nil
+}
+
+func (p *PodContainerProxier) updateImagePullSecrets(podName string, imagePullSecrets []corev1.LocalObjectReference) (newImagePullSecrets []corev1.LocalObjectReference, err error) {
+	updated := false
+	for _, transformer := range p.Transformers {
+		updated, newImagePullSecrets, err = transformer.RewriteImagePullSecrets(imagePullSecrets)
+		if err != nil {
+			return imagePullSecrets, err
+		}
+		if !updated {
+			return imagePullSecrets, nil
+		}
+		logger.Info(fmt.Sprintf("rewriting the imagePullSecrets of the pod %s from %q to %q", podName, imagePullSecrets, newImagePullSecrets))
+	}
+	return newImagePullSecrets, nil
+}
+
+func (p *PodContainerProxier) getPodName(pod *corev1.Pod) (podName string) {
+	if pod.Name != "" {
+		return pod.Name
+	}
+	if pod.ObjectMeta.Labels["app.kubernetes.io/name"] != "" {
+		return pod.ObjectMeta.Labels["app.kubernetes.io/name"]
+	}
+	if pod.ObjectMeta.Labels["app"] != "" {
+		return pod.ObjectMeta.Labels["app"]
+	}
+	return pod.GenerateName
 }

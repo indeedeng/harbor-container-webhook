@@ -13,6 +13,11 @@
       "metadata": {
       },
       "spec": {
+        "imagePullSecrets": [
+          {
+            "name": "foo"
+          }
+        ],
         "containers": [
           {
             "name": "foo",

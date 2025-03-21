@@ -79,10 +79,13 @@ type ProxyRule struct {
 	// If the webhook lacks permissions to fetch the image manifest or the registry is down, the image
 	// will not be rewritten. Experimental.
 	CheckUpstream bool `yaml:"checkUpstream"`
+	// ReplaceImagePullSecrets enables the replacement of the imagePullSecrets of the pod in addition to the image
+	ReplaceImagePullSecrets bool `yaml:"replaceImagePullSecrets"`
 	// List of the required platforms to check for if CheckUpstream is set. Defaults to "linux/amd64" if unset.
 	Platforms []string `yaml:"platforms"`
 	// AuthSecretName is a reference to an image pull secret (must be .dockerconfigjson type) which
-	// will be used to authenticate if `checkUpstream` is set. Unused if not specified or `checkUpstream` is false.
+	// will be used to authenticate if `checkUpstream` is set or to modify the imagePullSecrets if
+	// `replaceImagePullSecrets` is set.
 	AuthSecretName string `yaml:"authSecretName"`
 	// Namespace that the webhook is running in, used for accessing secrets for authenticated proxy rules
 	Namespace string

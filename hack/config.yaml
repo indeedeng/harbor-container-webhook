@@ -19,3 +19,10 @@ rules:
     replace: 'harbor-v2.awscmhqa2.k8s.indeed.tech/dockerhub-proxy-auth'
     checkUpstream: true # tests if the manifest for the rewritten image exists
     authSecretName: "harborv2-qa"
+  - name: 'docker.io rewrite rule with imagePullSecret change'
+    # image refs must match at least one of the rules, and not match any excludes
+    matches:
+      - '^docker.io'
+    replace: 'harbor.example.com/dockerhub-proxy'
+    authSecretName: "harborv2-qa"
+    replaceImagePullSecrets: true
