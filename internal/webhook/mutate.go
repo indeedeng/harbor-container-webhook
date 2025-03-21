@@ -55,7 +55,7 @@ func (p *PodContainerProxier) Handle(ctx context.Context, req admission.Request)
 	}
 
 	// imagePullSecrets
-	imagePullSecrets, _, err := p.updateImagePullSecrets(pod.Name, pod.Spec.ImagePullSecrets)
+	imagePullSecrets, _, err := p.updateImagePullSecrets(p.getPodName(pod), pod.Spec.ImagePullSecrets)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -140,4 +140,17 @@ func (p *PodContainerProxier) updateImagePullSecrets(podName string, imagePullSe
 		logger.Info(fmt.Sprintf("rewriting the imagePullSecrets of the pod %s from %q to %q", podName, imagePullSecrets, newImagePullSecrets))
 	}
 	return newImagePullSecrets, updated, nil
+}
+
+func (p *PodContainerProxier) getPodName(pod *corev1.Pod) (podName string) {
+	if pod.Name != "" {
+		return pod.Name
+	}
+	if pod.ObjectMeta.Labels["app.kubernetes.io/name"] != "" {
+		return pod.ObjectMeta.Labels["app.kubernetes.io/name"]
+	}
+	if pod.ObjectMeta.Labels["app"] != "" {
+		return pod.ObjectMeta.Labels["app"]
+	}
+	return pod.GenerateName
 }
