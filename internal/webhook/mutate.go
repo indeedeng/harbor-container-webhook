@@ -129,8 +129,9 @@ func (p *PodContainerProxier) InjectDecoder(d admission.Decoder) error {
 }
 
 func (p *PodContainerProxier) updateImagePullSecrets(podName string, imagePullSecrets []corev1.LocalObjectReference) (newImagePullSecrets []corev1.LocalObjectReference, err error) {
+	updated := false
 	for _, transformer := range p.Transformers {
-		updated, newImagePullSecrets, err := transformer.RewriteImagePullSecrets(imagePullSecrets)
+		updated, newImagePullSecrets, err = transformer.RewriteImagePullSecrets(imagePullSecrets)
 		if err != nil {
 			return imagePullSecrets, err
 		}
